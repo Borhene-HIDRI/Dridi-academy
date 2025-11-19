@@ -42,7 +42,7 @@ const TEAM = [
     name: "Abderahmen Dridi",
     role: "Head Coach / Pro Fighter",
     image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/304978983_467385692067685_6003878413241691908_n-51rpgTr5dSOUBUukABtsVCEq7MAuXw.jpg",
-    achievements: ["FCF MMA Champion", "OAS Champion", "Pro Record Holder"]
+    achievements: []
   },
   {
     name: "Moujib Boudaya",
