@@ -48,13 +48,13 @@ const TEAM = [
     name: "Moujib Boudaya",
     role: "Coach",
     image: "images/moujib.jpg",
-    achievements: ["K1 Specialist", "Muay Thai Champion", "Technical Expert"]
+    achievements: []
   },
   {
     name: "Grappling Specialist",
     role: "Coach",
     image: "/mma-grappling-coach-black-and-white.jpg",
-    achievements: ["BJJ Black Belt", "National Champion", "Submission Artist"]
+    achievements: []
   }
 ]
 
