@@ -83,7 +83,7 @@ function Navbar({onJoinNow}) {
             />
           </div></a>
           <span className="font-heading text-xl font-bold tracking-tighter hidden sm:block">
-            DRIDI <span className="text-primary">MMA</span>
+            ABDERAHMEN DRIDI <span className="text-primary">MMA</span>
           </span>
         </div>
         <div className="hidden md:flex items-center gap-8 font-heading text-sm tracking-widest">
