@@ -89,7 +89,7 @@ export function RegistrationModal({ isOpen, onClose }: RegistrationModalProps) {
                         value={formData.mobile}
                         onChange={(e) => setFormData({...formData, mobile: e.target.value})}
                         className="w-full bg-black/50 border border-white/10 p-3 text-white focus:border-primary outline-none transition-colors placeholder:text-gray-600"
-                        placeholder="+1 (555) 000-0000"
+                        placeholder="+216 00000000"
                       />
                     </div>
 
@@ -123,13 +123,13 @@ export function RegistrationModal({ isOpen, onClose }: RegistrationModalProps) {
                           className="flex items-center justify-center gap-2 w-full bg-black/50 border border-white/10 border-dashed p-4 text-gray-400 hover:text-white hover:border-primary cursor-pointer transition-all"
                         >
                           <Upload className="h-4 w-4" />
-                          <span className="text-sm">{formData.picture ? formData.picture.name : "Click to upload photo"}</span>
+                          <span className="text-sm">{formData.picture ? formData.picture.name : "Upload photo"}</span>
                         </label>
                       </div>
                     </div>
 
                     <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-white font-heading text-lg py-6 rounded-none mt-4">
-                      SUBMIT APPLICATION
+                      SUBMIT
                     </Button>
                   </form>
                 </>

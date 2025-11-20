@@ -51,7 +51,7 @@ const TEAM = [
     achievements: []
   },
   {
-    name: "Grappling Specialist",
+    name: "Les coach lokhrin",
     role: "Coach",
     image: "/mma-grappling-coach-black-and-white.jpg",
     achievements: []
@@ -60,7 +60,7 @@ const TEAM = [
 
 // --- Components ---
 
-function Navbar() {
+function Navbar({onJoinNow}) {
   const [isScrolled, setIsScrolled] = useState(false)
 
   useEffect(() => {
@@ -92,9 +92,12 @@ function Navbar() {
           <Link href="/about" className="hover:text-primary transition-colors">ABOUT</Link>
           <a href="#contact" className="hover:text-primary transition-colors">CONTACT</a>
         </div>
-        <Button className="bg-primary hover:bg-primary/90 text-white font-heading tracking-wider rounded-none skew-x-[-10deg]">
-          <span className="skew-x-[10deg]">JOIN NOW</span>
-        </Button>
+     <Button 
+  onClick={onJoinNow}
+  className="bg-primary hover:bg-primary/90 text-white font-heading tracking-wider rounded-none skew-x-[-10deg]"
+>
+  <span className="skew-x-[10deg]">JOIN NOW</span>
+</Button>
       </div>
     </nav>
   )
@@ -140,9 +143,10 @@ function Hero({ onStartTraining }: { onStartTraining: () => void }) {
             >
               START TRAINING
             </Button>
+            <a href="#schedule">
             <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-black font-heading text-lg px-8 py-6 rounded-none">
               VIEW SCHEDULE
-            </Button>
+            </Button></a>
           </div>
         </motion.div>
       </div>
@@ -175,7 +179,7 @@ function Marquee() {
   )
 }
 
-function Schedule() {
+function Schedule({onBook}) {
   const days = Object.keys(SCHEDULE)
   const [activeDay, setActiveDay] = useState("Monday")
 
@@ -232,9 +236,13 @@ function Schedule() {
                               {session.level.toUpperCase()}
                             </span>
                             
-                            <Button size="sm" className="bg-white text-black hover:bg-primary hover:text-white rounded-none" >
-                              BOOK
-                            </Button>
+                           <Button 
+  size="sm"
+  onClick={onBook}
+  className="bg-white text-black hover:bg-primary hover:text-white rounded-none"
+>
+  BOOK
+</Button>
                           </div>
                         </CardContent>
                       </Card>
@@ -311,8 +319,7 @@ function Contact() {
             <h2 className="text-primary font-heading text-lg tracking-widest mb-2">GET IN TOUCH</h2>
             <h3 className="text-5xl md:text-6xl font-heading font-bold text-white mb-8">START YOUR JOURNEY</h3>
             <p className="text-gray-400 text-lg mb-12 max-w-md">
-              Ready to step on the mats? First class is free. Contact us to schedule your introduction or stop by during opening hours.
-            </p>
+Contact us to schedule your first session, or feel free to stop by during our opening hours.            </p>
             
             <div className="space-y-8">
               <div className="flex items-start gap-4">
@@ -321,8 +328,8 @@ function Contact() {
                 </div>
                 <div>
                   <h4 className="text-xl font-heading text-white mb-1">LOCATION</h4>
-                  <p className="text-gray-400">123 Fighter's Way, Combat City</p>
-                  <p className="text-gray-400">Gym District, 5000</p>
+                  <p className="text-gray-400">Menzah 6</p>
+                  <p className="text-gray-400">Ariana, Tunisie</p>
                 </div>
               </div>
               
@@ -342,7 +349,7 @@ function Contact() {
                 </div>
                 <div>
                   <h4 className="text-xl font-heading text-white mb-1">PHONE</h4>
-                  <p className="text-gray-400">+1 (555) 123-4567</p>
+                  <p className="text-gray-400">+216 24339167</p>
                 </div>
               </div>
             </div>
@@ -427,14 +434,14 @@ function Footer() {
 }
 
 export default function Home() {
-  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
     <main className="min-h-screen bg-background text-foreground selection:bg-primary selection:text-white">
-      <Navbar />
+<Navbar onJoinNow={() => setIsModalOpen(true)} />
       <Hero onStartTraining={() => setIsModalOpen(true)} />
       <Marquee />
-      <Schedule />
+      <Schedule onBook={() => setIsModalOpen(true)} />
       <Team />
       <Contact />
       <Footer />
