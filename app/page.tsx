@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Link from "next/link"
 import { RegistrationModal } from "@/components/registration-modal"
+import { AuthModal } from "@/components/auth-modal"
 
 // --- Data ---
 
@@ -62,6 +63,7 @@ const TEAM = [
 
 function Navbar({onJoinNow}) {
   const [isScrolled, setIsScrolled] = useState(false)
+const [authOpen, setAuthOpen] = useState(false)
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50)
@@ -321,15 +323,15 @@ function Contact() {
             <p className="text-gray-400 text-lg mb-12 max-w-md">
 Contact us to schedule your first session, or feel free to stop by during our opening hours.            </p>
             
-            <div className="space-y-8">
+            <div className="space-y-6">
               <div className="flex items-start gap-4">
                 <div className="bg-secondary p-3 rounded-none">
                   <MapPin className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <h4 className="text-xl font-heading text-white mb-1">LOCATION</h4>
-                  <p className="text-gray-400">Menzah 6</p>
-                  <p className="text-gray-400">Ariana, Tunisie</p>
+                  <h4 className="text-xl font-heading text-white -mb-0.5">LOCATION</h4>
+                  <p className="text-gray-400">Menzah 6, Ariana ,TN</p>
+                  {/* <p className="text-gray-400">Tunisia</p> */}
                 </div>
               </div>
               
@@ -338,7 +340,7 @@ Contact us to schedule your first session, or feel free to stop by during our op
                   <Mail className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <h4 className="text-xl font-heading text-white mb-1">EMAIL</h4>
+                  <h4 className="text-xl font-heading text-white -mb-0.5">EMAIL</h4>
                   <p className="text-gray-400">info@dridimma.com</p>
                 </div>
               </div>
@@ -348,7 +350,7 @@ Contact us to schedule your first session, or feel free to stop by during our op
                   <Phone className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <h4 className="text-xl font-heading text-white mb-1">PHONE</h4>
+                  <h4 className="text-xl font-heading text-white -mb-0.5">PHONE</h4>
                   <p className="text-gray-400">+216 24339167</p>
                 </div>
               </div>
@@ -410,7 +412,7 @@ Contact us to schedule your first session, or feel free to stop by during our op
 
 function Footer() {
   return (
-    <footer className="bg-black py-12 border-t border-white/10">
+    <footer className="bg-black py-7 border-t border-white/10">
       <div className="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-6">
         <div className="flex items-center gap-2">
           <div className="relative w-8 h-8 overflow-hidden rounded-full bg-white p-0.5">
@@ -435,16 +437,19 @@ function Footer() {
 
 export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
 
   return (
     <main className="min-h-screen bg-background text-foreground selection:bg-primary selection:text-white">
-<Navbar onJoinNow={() => setIsModalOpen(true)} />
-      <Hero onStartTraining={() => setIsModalOpen(true)} />
+<Navbar onJoinNow={() => setIsAuthModalOpen(true)} />
+<Hero onStartTraining={() => setIsAuthModalOpen(true)} />
       <Marquee />
-      <Schedule onBook={() => setIsModalOpen(true)} />
+<Schedule onBook={() => setIsAuthModalOpen(true)} />
       <Team />
       <Contact />
       <Footer />
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+
       <RegistrationModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </main>
   )
