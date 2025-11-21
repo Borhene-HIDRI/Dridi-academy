@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { LogOut, Search, Users, Trophy, Calendar } from "lucide-react"
 import { getAthletes, type Athlete } from "@/lib/mock-data"
 import { AthleteModal } from "@/components/athlete-modal"
+import { UserProfileDropdown } from "@/components/user-profile-dropdown"
 
 export default function AdminPage() {
   const { user, isAuthenticated, logout } = useAuth()
@@ -69,14 +70,8 @@ export default function AdminPage() {
             <h1 className="text-4xl font-bold mb-2">Admin Dashboard</h1>
             <p className="text-zinc-400">Manage your athletes and memberships</p>
           </div>
-          <Button
-            onClick={handleLogout}
-            variant="outline"
-            className="border-red-600 text-red-600 hover:bg-red-600 hover:text-white bg-transparent"
-          >
-            <LogOut className="mr-2 h-4 w-4" />
-            Logout
-          </Button>
+        <UserProfileDropdown />
+
         </div>
 
         <div className="grid gap-3 md:grid-cols-3 mb-3">

@@ -98,12 +98,12 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
             </button>
 
             <div className="p-8">
-              <div className="text-center mb-8">
+              <div className="text-center mb-5">
                 <h2 className="text-2xl font-heading font-bold text-white mb-2">
                   {activeTab === "login" ? "WELCOME BACK" : "JOIN THE TEAM"}
                 </h2>
                 <p className="text-gray-400 text-sm">
-                  {activeTab === "login" ? "Access your dashboard" : "Start your journey to greatness today."}
+                  {activeTab === "login" ? "" : ""}
                 </p>
               </div>
 
@@ -170,9 +170,9 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                     >
                       {loading ? "LOGGING IN..." : "LOGIN"}
                     </Button>
-                    <p className="text-xs text-zinc-500 text-center mt-4">
+                    {/* <p className="text-xs text-zinc-500 text-center mt-4">
                       Demo: admin@mma.com / admin123 or any email / user123
-                    </p>
+                    </p> */}
                   </motion.form>
                 ) : (
                   <motion.form

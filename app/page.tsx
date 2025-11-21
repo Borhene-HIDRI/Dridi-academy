@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Link from "next/link"
 import { RegistrationModal } from "@/components/registration-modal"
 import { AuthModal } from "@/components/auth-modal"
+import { MessageConfirmationModal } from "@/components/message-confirmation-modal"
 
 // --- Data ---
 
@@ -310,8 +311,7 @@ function Team() {
   )
 }
 
-function Contact() {
-  return (
+function Contact({ onSendMessage }: { onSendMessage: (e: React.FormEvent) => void }) {  return (
     <section id="contact" className="py-24 bg-background relative overflow-hidden">
       <div className="absolute top-0 right-0 w-1/2 h-full bg-primary/5 skew-x-12 pointer-events-none" />
       
@@ -371,7 +371,7 @@ Contact us to schedule your first session, or feel free to stop by during our op
           </div>
 
           <div className="bg-secondary/20 p-8 border border-white/5 backdrop-blur-sm">
-            <form className="space-y-6">
+            <form className="space-y-6" onSubmit={onSendMessage}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="text-sm font-heading tracking-wider text-gray-400">FIRST NAME</label>
@@ -399,7 +399,10 @@ Contact us to schedule your first session, or feel free to stop by during our op
                 <label className="text-sm font-heading tracking-wider text-gray-400">MESSAGE</label>
                 <textarea rows={4} className="w-full bg-black/50 border border-white/10 p-3 text-white focus:border-primary outline-none transition-colors"></textarea>
               </div>
-              <Button className="w-full bg-primary hover:bg-primary/90 text-white font-heading text-lg py-6 rounded-none">
+               <Button
+                type="submit"
+                className="w-full bg-primary hover:bg-primary/90 text-white font-heading text-lg py-6 rounded-none"
+              >
                 SEND MESSAGE
               </Button>
             </form>
@@ -438,6 +441,12 @@ function Footer() {
 export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+ const [isMessageModalOpen, setIsMessageModalOpen] = useState(false)
+
+ const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsMessageModalOpen(true)
+  }
 
   return (
     <main className="min-h-screen bg-background text-foreground selection:bg-primary selection:text-white">
@@ -446,11 +455,13 @@ export default function Home() {
       <Marquee />
 <Schedule onBook={() => setIsAuthModalOpen(true)} />
       <Team />
-      <Contact />
+      <Contact onSendMessage={handleSendMessage}/>
       <Footer />
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
 
       <RegistrationModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
-    </main>
+        <MessageConfirmationModal isOpen={isMessageModalOpen} onClose={() => setIsMessageModalOpen(false)} />
+   
+   </main>
   )
 }

@@ -1,12 +1,35 @@
 "use client"
 
+import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { motion } from "framer-motion"
-import { Trophy, Target, Users, Star, ChevronRight, ArrowLeft } from 'lucide-react'
+import { motion, AnimatePresence } from "framer-motion"
+import { Trophy, Target, Star, ChevronRight, ArrowLeft, X, ZoomIn } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
+const galleryImages = [
+  {
+    src: "/images/3.jpg",
+    alt: "Fight Action",
+  },
+  {
+    src: "/images/9.jpg",
+    alt: "Training Session",
+  },
+  {
+    src: "/images/99.jpg",
+    alt: "Championship Belts",
+  },
+  {
+    src: "/images/11.jpg",
+    alt: "Team Logo",
+  },
+]
+
+
+
 export default function AboutPage() {
+    const [selectedImage, setSelectedImage] = useState<string | null>(null)
   return (
     <main className="min-h-screen bg-background text-foreground">
       {/* Navigation */}
@@ -88,10 +111,7 @@ export default function AboutPage() {
                   of discipline, sacrifice, and real combat experience. With championship victories and 
                   battles on the professional circuit, he has tested his skills against elite athletes 
                   and proven his mastery inside the cage.
-                  <br />
-                  Known for his precision striking, pressure fighting style, and relentless work ethic, 
-                  Coach Dridi brings the mentality of a true warrior to every training session — inspiring 
-                  each student to push past their limits physically and mentally.                </p>
+               </p>
               </div>
 
               <div>
@@ -122,6 +142,71 @@ export default function AboutPage() {
           </div>
         </div>
       </section>
+
+
+      {/* Gallery Section */}
+      <section className="py-24 bg-black border-t border-white/5">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-primary font-heading text-lg tracking-widest mb-2">GALLERY</h2>
+            <h3 className="text-4xl md:text-5xl font-heading font-bold text-white">INSIDE THE ARENA</h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {galleryImages.map((image, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+                className="relative aspect-square group cursor-pointer overflow-hidden border border-white/10"
+                onClick={() => setSelectedImage(image.src)}
+              >
+                <Image
+                  src={image.src || "/placeholder.svg"}
+                  alt={image.alt}
+                  fill
+                  className="object-cover transition-transform duration-500 group-hover:scale-110"
+                />
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                  <ZoomIn className="text-primary h-8 w-8" />
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Image Modal */}
+      <AnimatePresence>
+        {selectedImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedImage(null)}
+            className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute top-4 right-4 text-white hover:text-primary transition-colors"
+            >
+              <X className="h-8 w-8" />
+            </button>
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
+              className="relative w-full max-w-5xl aspect-video"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Image src={selectedImage || "/placeholder.svg"} alt="Gallery Preview" fill className="object-contain" />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
 
       {/* The School Section */}
       <section className="py-24 bg-secondary/10 border-y border-white/5">
