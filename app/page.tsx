@@ -11,6 +11,8 @@ import Link from "next/link"
 import { RegistrationModal } from "@/components/registration-modal"
 import { AuthModal } from "@/components/auth-modal"
 import { MessageConfirmationModal } from "@/components/message-confirmation-modal"
+import { ContactMessageDTO } from "@/lib/types/contact"
+import { ContactService } from "@/lib/services/ContactService"
 
 // --- Data ---
 
@@ -311,36 +313,59 @@ function Team() {
   )
 }
 
-function Contact({ onSendMessage }: { onSendMessage: (e: React.FormEvent) => void }) {  return (
-    <section id="contact" className="py-24 bg-background relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-1/2 h-full bg-primary/5 skew-x-12 pointer-events-none" />
-      
+function Contact({ onSendMessage }: { onSendMessage: (data: ContactMessageDTO) => void }) {
+  const [form, setForm] = useState<ContactMessageDTO>({
+    firstName: "",
+    lastName: "",
+    email: "",
+    interest: "MMA",
+    message: "",
+  });
+
+  const update = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const submit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    onSendMessage(form); // sends DTO to Home
+  };
+
+  return (
+    <section id="contact" className="py-20 bg-background relative overflow-hidden">
       <div className="container mx-auto px-4 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+
+          {/* Left side */}
           <div>
             <h2 className="text-primary font-heading text-lg tracking-widest mb-2">GET IN TOUCH</h2>
-            <h3 className="text-5xl md:text-6xl font-heading font-bold text-white mb-8">START YOUR JOURNEY</h3>
+            <h3 className="text-5xl md:text-6xl font-heading font-bold text-white mb-8">
+              START YOUR JOURNEY
+            </h3>
             <p className="text-gray-400 text-lg mb-12 max-w-md">
-Contact us to schedule your first session, or feel free to stop by during our opening hours.            </p>
-            
+              Contact us to schedule your first session, or feel free to stop by during our opening hours.
+            </p>
+
+            {/* Contact info */}
             <div className="space-y-6">
               <div className="flex items-start gap-4">
                 <div className="bg-secondary p-3 rounded-none">
                   <MapPin className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <h4 className="text-xl font-heading text-white -mb-0.5">LOCATION</h4>
-                  <p className="text-gray-400">Menzah 6, Ariana ,TN</p>
-                  {/* <p className="text-gray-400">Tunisia</p> */}
+                  <h4 className="text-xl text-white">LOCATION</h4>
+                  <p className="text-gray-400">Menzah 6, Ariana, TN</p>
                 </div>
               </div>
-              
+
               <div className="flex items-start gap-4">
                 <div className="bg-secondary p-3 rounded-none">
                   <Mail className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <h4 className="text-xl font-heading text-white -mb-0.5">EMAIL</h4>
+                  <h4 className="text-xl text-white">EMAIL</h4>
                   <p className="text-gray-400">info@dridimma.com</p>
                 </div>
               </div>
@@ -350,59 +375,95 @@ Contact us to schedule your first session, or feel free to stop by during our op
                   <Phone className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <h4 className="text-xl font-heading text-white -mb-0.5">PHONE</h4>
+                  <h4 className="text-xl text-white">PHONE</h4>
                   <p className="text-gray-400">+216 24339167</p>
                 </div>
               </div>
             </div>
 
+            {/* Socials */}
             <div className="flex gap-4 mt-12">
-  <Link href="https://www.instagram.com/teamdridimma" target="_blank">
-              <Button variant="outline" size="icon" className="rounded-none border-white/20 hover:bg-primary hover:border-primary hover:text-white">
-                <Instagram className="h-5 w-5" />
-              </Button>
+              <Link href="https://www.instagram.com/teamdridimma" target="_blank">
+                <Button variant="outline" size="icon" className="rounded-none hover:bg-primary">
+                  <Instagram className="h-5 w-5" />
+                </Button>
               </Link>
-  <Link href="https://www.facebook.com/teamdridimma" target="_blank">
-              <Button variant="outline" size="icon" className="rounded-none border-white/20 hover:bg-primary hover:border-primary hover:text-white">
-                <Facebook className="h-5 w-5" />
-              </Button>
+
+              <Link href="https://www.facebook.com/teamdridimma" target="_blank">
+                <Button variant="outline" size="icon" className="rounded-none hover:bg-primary">
+                  <Facebook className="h-5 w-5" />
+                </Button>
               </Link>
             </div>
           </div>
 
+          {/* Right side form */}
           <div className="bg-secondary/20 p-8 border border-white/5 backdrop-blur-sm">
-            <form className="space-y-6" onSubmit={onSendMessage}>
+            <form onSubmit={submit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-heading tracking-wider text-gray-400">FIRST NAME</label>
-                  <input type="text" className="w-full bg-black/50 border border-white/10 p-3 text-white focus:border-primary outline-none transition-colors" />
+                <div>
+                  <label className="text-gray-400 text-sm">FIRST NAME</label>
+                  <input
+                    name="firstName"
+                    value={form.firstName}
+                    onChange={update}
+                    required
+                    className="w-full bg-black/50 border border-white/10 p-3 text-white"
+                  />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-heading tracking-wider text-gray-400">LAST NAME</label>
-                  <input type="text" className="w-full bg-black/50 border border-white/10 p-3 text-white focus:border-primary outline-none transition-colors" />
+
+                <div>
+                  <label className="text-gray-400 text-sm">LAST NAME</label>
+                  <input
+                    name="lastName"
+                    value={form.lastName}
+                    onChange={update}
+                    required
+                    className="w-full bg-black/50 border border-white/10 p-3 text-white"
+                  />
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-heading tracking-wider text-gray-400">EMAIL ADDRESS</label>
-                <input type="email" className="w-full bg-black/50 border border-white/10 p-3 text-white focus:border-primary outline-none transition-colors" />
+
+              <div>
+                <label className="text-gray-400 text-sm">EMAIL</label>
+                <input
+                  name="email"
+                  type="email"
+                  value={form.email}
+                  onChange={update}
+                  required
+                  className="w-full bg-black/50 border border-white/10 p-3 text-white"
+                />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-heading tracking-wider text-gray-400">INTEREST</label>
-                <select className="w-full bg-black/50 border border-white/10 p-3 text-white focus:border-primary outline-none transition-colors">
-                  <option>MMA</option>
-                  <option>Kickboxing</option>
-                  <option>BJJ</option>
-                  <option>Kids Class</option>
+
+              <div>
+                <label className="text-gray-400 text-sm">INTEREST</label>
+                <select
+                  name="interest"
+                  value={form.interest}
+                  onChange={update}
+                  className="w-full bg-black/50 border border-white/10 p-3 text-white"
+                >
+                  <option value="MMA">MMA</option>
+                  <option value="Kickboxing">Kickboxing</option>
+                  <option value="BJJ">BJJ</option>
+                  <option value="Kids Class">Kids Class</option>
                 </select>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-heading tracking-wider text-gray-400">MESSAGE</label>
-                <textarea rows={4} className="w-full bg-black/50 border border-white/10 p-3 text-white focus:border-primary outline-none transition-colors"></textarea>
+
+              <div>
+                <label className="text-gray-400 text-sm">MESSAGE</label>
+                <textarea
+                  name="message"
+                  rows={4}
+                  value={form.message}
+                  onChange={update}
+                  required
+                  className="w-full bg-black/50 border border-white/10 p-3 text-white"
+                />
               </div>
-               <Button
-                type="submit"
-                className="w-full bg-primary hover:bg-primary/90 text-white font-heading text-lg py-6 rounded-none"
-              >
+
+              <Button type="submit" className="w-full bg-primary py-6">
                 SEND MESSAGE
               </Button>
             </form>
@@ -410,8 +471,9 @@ Contact us to schedule your first session, or feel free to stop by during our op
         </div>
       </div>
     </section>
-  )
+  );
 }
+
 
 function Footer() {
   return (
@@ -443,10 +505,15 @@ export default function Home() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
  const [isMessageModalOpen, setIsMessageModalOpen] = useState(false)
 
- const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsMessageModalOpen(true)
-  }
+  const handleSendMessage = async (data: ContactMessageDTO) => {
+    try {
+      await ContactService.sendMessage(data);
+      setIsMessageModalOpen(true);
+    } catch (error) {
+      console.error(error);
+      alert("Failed to send message.");
+    }
+  };
 
   return (
     <main className="min-h-screen bg-background text-foreground selection:bg-primary selection:text-white">

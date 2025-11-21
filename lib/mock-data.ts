@@ -12,14 +12,31 @@ export interface Athlete {
   totalClassesAttended: number
   totalBookings: number
   createdAt: string
+  trainingPeriodStart: string
+  trainingPeriodEnd: string
+  paymentHistory: {
+    month: string // Format: "YYYY-MM"
+    status: "paid" | "unpaid" | "pending"
+  }[]
+}
+
+export interface Message {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+  interest: string
+  message: string
+  createdAt: string
+  read: boolean
 }
 
 export const mockAthletes: Athlete[] = [
   {
     id: "1",
-    fullName: "Mohamed Ben Ali",
-    email: "mohamed.benali@example.com",
-    imageUrl: "/placeholder.svg?height=100&width=100",
+    fullName: "Borhene HIDRI",
+    email: "Borhene.hidri@gmail.com",
+    imageUrl: "/images/PHOTO.jpg",
     phoneNumber: "+216 98 123 456",
     dateOfBirth: "1995-05-15",
     emergencyContact: "+216 98 654 321",
@@ -29,6 +46,15 @@ export const mockAthletes: Athlete[] = [
     totalClassesAttended: 45,
     totalBookings: 50,
     createdAt: "2024-01-15",
+    trainingPeriodStart: "2024-01-01",
+    trainingPeriodEnd: "2024-12-31",
+    paymentHistory: [
+      { month: "2024-01", status: "paid" },
+      { month: "2024-02", status: "paid" },
+      { month: "2024-03", status: "paid" },
+      { month: "2024-04", status: "paid" },
+      { month: "2024-05", status: "pending" },
+    ],
   },
   {
     id: "2",
@@ -44,6 +70,13 @@ export const mockAthletes: Athlete[] = [
     totalClassesAttended: 28,
     totalBookings: 32,
     createdAt: "2024-03-20",
+    trainingPeriodStart: "2024-03-01",
+    trainingPeriodEnd: "2025-02-28",
+    paymentHistory: [
+      { month: "2024-03", status: "paid" },
+      { month: "2024-04", status: "unpaid" },
+      { month: "2024-05", status: "pending" },
+    ],
   },
   {
     id: "3",
@@ -59,6 +92,9 @@ export const mockAthletes: Athlete[] = [
     totalClassesAttended: 15,
     totalBookings: 20,
     createdAt: "2024-06-10",
+    trainingPeriodStart: "2024-06-01",
+    trainingPeriodEnd: "2024-12-31",
+    paymentHistory: [],
   },
   {
     id: "4",
@@ -74,10 +110,45 @@ export const mockAthletes: Athlete[] = [
     totalClassesAttended: 78,
     totalBookings: 85,
     createdAt: "2023-09-01",
+    trainingPeriodStart: "2023-09-01",
+    trainingPeriodEnd: "2024-08-31",
+    paymentHistory: [
+      { month: "2023-09", status: "paid" },
+      { month: "2023-10", status: "paid" },
+      { month: "2023-11", status: "paid" },
+      { month: "2023-12", status: "paid" },
+      { month: "2024-01", status: "paid" },
+      { month: "2024-02", status: "paid" },
+      { month: "2024-03", status: "paid" },
+      { month: "2024-04", status: "paid" },
+      { month: "2024-05", status: "paid" },
+    ],
   },
 ]
 
-// Store athletes in localStorage
+export const mockMessages: Message[] = [
+  {
+    id: "1",
+    firstName: "John",
+    lastName: "Doe",
+    email: "john@example.com",
+    interest: "MMA",
+    message: "I would like to join the MMA class. Do you offer trial sessions?",
+    createdAt: "2024-05-20T10:30:00Z",
+    read: false,
+  },
+  {
+    id: "2",
+    firstName: "Sarah",
+    lastName: "Smith",
+    email: "sarah@example.com",
+    interest: "Kickboxing",
+    message: "What is the schedule for kickboxing classes?",
+    createdAt: "2024-05-19T15:45:00Z",
+    read: true,
+  },
+]
+
 export function getAthletes(): Athlete[] {
   if (typeof window === "undefined") return mockAthletes
   const stored = localStorage.getItem("mma_athletes")
@@ -101,4 +172,35 @@ export function deleteAthlete(athleteId: string): void {
   const athletes = getAthletes()
   const filtered = athletes.filter((a) => a.id !== athleteId)
   localStorage.setItem("mma_athletes", JSON.stringify(filtered))
+}
+
+export function getMessages(): Message[] {
+  if (typeof window === "undefined") return mockMessages
+  const stored = localStorage.getItem("mma_messages")
+  if (!stored) {
+    localStorage.setItem("mma_messages", JSON.stringify(mockMessages))
+    return mockMessages
+  }
+  return JSON.parse(stored)
+}
+
+export function addMessage(message: Omit<Message, "id" | "createdAt" | "read">): void {
+  const messages = getMessages()
+  const newMessage: Message = {
+    ...message,
+    id: Math.random().toString(36).substr(2, 9),
+    createdAt: new Date().toISOString(),
+    read: false,
+  }
+  messages.unshift(newMessage)
+  localStorage.setItem("mma_messages", JSON.stringify(messages))
+}
+
+export function markMessageAsRead(id: string): void {
+  const messages = getMessages()
+  const index = messages.findIndex((m) => m.id === id)
+  if (index !== -1) {
+    messages[index].read = true
+    localStorage.setItem("mma_messages", JSON.stringify(messages))
+  }
 }
