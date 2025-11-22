@@ -1,7 +1,7 @@
 export interface ContactMessageDTO {
   firstName: string;
   lastName: string;
-  email: string;
+  PhoneNumber: string;
   interest: string;
   message: string;
 }

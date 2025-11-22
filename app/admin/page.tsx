@@ -1,31 +1,32 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/lib/auth-context"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Search, Users, Trophy, Calendar, MessageSquare, Mail, Clock } from "lucide-react"
-import { getAthletes, getMessages, markMessageAsRead, type Athlete, type Message } from "@/lib/mock-data"
-import { AthleteModal } from "@/components/athlete-modal"
-import { DashboardLayout } from "@/components/dashboard-layout"
-import { StatCard } from "@/components/stat-card"
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Search, Users, Trophy, Calendar, MessageSquare, Mail, Clock } from "lucide-react";
+import { getAthletes, getMessages, markMessageAsRead, type Athlete, type Message } from "@/lib/mock-data";
+import { AthleteModal } from "@/components/athlete-modal";
+import { DashboardLayout } from "@/components/dashboard-layout";
+import { StatCard } from "@/components/stat-card";
+import AuthGuard from "@/components/AuthGuard";
 
 
 // -----------------------------------------------------------
-// ⭐ Avatar component with FULL fallback logic
+// Avatar Component
 // -----------------------------------------------------------
 function AthleteAvatar({ athlete }: { athlete: Athlete }) {
-  const [useFallback, setUseFallback] = useState(false)
+  const [useFallback, setUseFallback] = useState(false);
 
   const handleLoad = (e: any) => {
-    // If Next.js returns placeholder.svg → force fallback
     if (e.target.src.includes("placeholder.svg")) {
-      setUseFallback(true)
+      setUseFallback(true);
     }
-  }
+  };
 
   return (
     <>
@@ -39,79 +40,63 @@ function AthleteAvatar({ athlete }: { athlete: Athlete }) {
         />
       ) : (
         <div className="h-12 w-12 rounded-full bg-zinc-800 flex items-center justify-center">
-          <span className="text-lg font-bold">
-            {athlete.fullName.charAt(0)}
-          </span>
+          <span className="text-lg font-bold">{athlete.fullName.charAt(0)}</span>
         </div>
       )}
     </>
-  )
+  );
 }
 
 
-// -----------------------------------------------------------
-// ⭐ MAIN Admin Page
-// -----------------------------------------------------------
-export default function AdminPage() {
-  const { user, isAuthenticated } = useAuth()
-  const router = useRouter()
 
-  const [athletes, setAthletes] = useState<Athlete[]>([])
-  const [messages, setMessages] = useState<Message[]>([])
-  const [filteredAthletes, setFilteredAthletes] = useState<Athlete[]>([])
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedAthlete, setSelectedAthlete] = useState<Athlete | null>(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
+// -----------------------------------------------------------
+//  MAIN ADMIN UI (Dashboard)
+// -----------------------------------------------------------
+function AdminContent() {
+  const [athletes, setAthletes] = useState<Athlete[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [filteredAthletes, setFilteredAthletes] = useState<Athlete[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedAthlete, setSelectedAthlete] = useState<Athlete | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Load data
+  // Load initial data
   useEffect(() => {
-    if (!isAuthenticated || user?.role !== "admin") {
-      router.push("/")
-      return
-    }
+    const loadedAthletes = getAthletes();
+    const loadedMessages = getMessages();
 
-    const loadedAthletes = getAthletes()
-    const loadedMessages = getMessages()
-    setAthletes(loadedAthletes)
-    setFilteredAthletes(loadedAthletes)
-    setMessages(loadedMessages)
-  }, [isAuthenticated, user, router])
+    setAthletes(loadedAthletes);
+    setFilteredAthletes(loadedAthletes);
+    setMessages(loadedMessages);
+  }, []);
 
-  // Search filter
+  // Search filtering
   useEffect(() => {
     const filtered = athletes.filter(
-      (athlete) =>
-        athlete.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        athlete.email.toLowerCase().includes(searchQuery.toLowerCase()),
-    )
-    setFilteredAthletes(filtered)
-  }, [searchQuery, athletes])
-
-  const handleAthleteClick = (athlete: Athlete) => {
-    setSelectedAthlete(athlete)
-    setIsModalOpen(true)
-  }
-
-  const handleAthleteUpdate = () => {
-    const updatedAthletes = getAthletes()
-    setAthletes(updatedAthletes)
-    setFilteredAthletes(updatedAthletes)
-  }
+      (a) =>
+        a.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        a.email.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    setFilteredAthletes(filtered);
+  }, [searchQuery, athletes]);
 
   const handleMarkAsRead = (id: string) => {
-    markMessageAsRead(id)
-    setMessages(getMessages())
-  }
+    markMessageAsRead(id);
+    setMessages(getMessages());
+  };
 
-  const totalActive = athletes.filter((a) => a.isMembershipActive).length
-  const totalClasses = athletes.reduce((sum, a) => sum + a.totalClassesAttended, 0)
-  const unreadMessages = messages.filter((m) => !m.read).length
+  const handleAthleteUpdate = () => {
+    const updated = getAthletes();
+    setAthletes(updated);
+    setFilteredAthletes(updated);
+  };
 
-  if (!user || user.role !== "admin") return null
+  const totalActive = athletes.filter((a) => a.isMembershipActive).length;
+  const totalClasses = athletes.reduce((sum, a) => sum + a.totalClassesAttended, 0);
+  const unreadMessages = messages.filter((m) => !m.read).length;
 
   return (
     <DashboardLayout title="Admin Dashboard" description="">
-      
       {/* Top Stats */}
       <div className="grid gap-6 md:grid-cols-4 mb-8">
         <StatCard title="Total Athletes" value={athletes.length} description="Registered members" icon={Users} />
@@ -120,7 +105,6 @@ export default function AdminPage() {
         <StatCard title="New Messages" value={unreadMessages} description="Unread inquiries" icon={MessageSquare} />
       </div>
 
-
       {/* Tabs */}
       <Tabs defaultValue="athletes" className="space-y-6">
         <TabsList className="bg-zinc-900 border-zinc-800">
@@ -128,8 +112,7 @@ export default function AdminPage() {
           <TabsTrigger value="messages">Messages ({unreadMessages})</TabsTrigger>
         </TabsList>
 
-
-        {/* Athletes Tab */}
+        {/* Athletes */}
         <TabsContent value="athletes">
           <Card className="bg-zinc-900 border-zinc-800">
             <CardHeader>
@@ -151,21 +134,20 @@ export default function AdminPage() {
                 {filteredAthletes.map((athlete) => (
                   <div
                     key={athlete.id}
-                    onClick={() => handleAthleteClick(athlete)}
+                    onClick={() => {
+                      setSelectedAthlete(athlete);
+                      setIsModalOpen(true);
+                    }}
                     className="flex items-center justify-between p-4 border border-zinc-800 rounded-lg hover:border-red-600 cursor-pointer transition-colors"
                   >
-                    
-                    {/* Avatar + Info */}
                     <div className="flex items-center gap-4">
                       <AthleteAvatar athlete={athlete} />
-
                       <div>
                         <h3 className="font-semibold">{athlete.fullName}</h3>
                         <p className="text-sm text-zinc-400">{athlete.phoneNumber}</p>
                       </div>
                     </div>
 
-                    {/* Credits + Active Status */}
                     <div className="flex items-center gap-4">
                       <div className="text-right">
                         <p className="text-sm font-medium">{athlete.trainingCredits} Credits</p>
@@ -176,7 +158,6 @@ export default function AdminPage() {
                         {athlete.isMembershipActive ? "Active" : "Inactive"}
                       </Badge>
                     </div>
-
                   </div>
                 ))}
               </div>
@@ -184,8 +165,7 @@ export default function AdminPage() {
           </Card>
         </TabsContent>
 
-
-        {/* Messages Tab */}
+        {/* Messages */}
         <TabsContent value="messages">
           <Card className="bg-zinc-900 border-zinc-800">
             <CardHeader>
@@ -213,7 +193,6 @@ export default function AdminPage() {
                           </h3>
                           {!message.read && <Badge className="bg-red-600 text-[10px] h-5">NEW</Badge>}
                         </div>
-
                         <div className="flex items-center text-xs text-zinc-400 gap-1">
                           <Clock className="h-3 w-3" />
                           {new Date(message.createdAt).toLocaleDateString()} at{" "}
@@ -240,19 +219,31 @@ export default function AdminPage() {
         </TabsContent>
       </Tabs>
 
-
       {/* Athlete Modal */}
       {selectedAthlete && (
         <AthleteModal
           athlete={selectedAthlete}
           isOpen={isModalOpen}
           onClose={() => {
-            setIsModalOpen(false)
-            setSelectedAthlete(null)
+            setIsModalOpen(false);
+            setSelectedAthlete(null);
           }}
           onUpdate={handleAthleteUpdate}
         />
       )}
     </DashboardLayout>
-  )
+  );
+}
+
+
+
+// -----------------------------------------------------------
+//  EXPORT PAGE WITH AUTH GUARD
+// -----------------------------------------------------------
+export default function AdminPage() {
+  return (
+    <AuthGuard role="Admin">
+      <AdminContent />
+    </AuthGuard>
+  );
 }

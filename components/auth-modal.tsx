@@ -9,6 +9,11 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
+import { UserService } from "@/lib/services/UserService"
+import { toast } from "sonner";
+import { AuthResponse } from "@/lib/types/user"
+import { jwtDecode } from "jwt-decode";
+
 
 interface AuthModalProps {
   isOpen: boolean
@@ -16,59 +21,152 @@ interface AuthModalProps {
 }
 
 export function AuthModal({ isOpen, onClose }: AuthModalProps) {
-  const [activeTab, setActiveTab] = useState<"login" | "register">("login")
+  const [activeTab, setActiveTab] = useState<"login" | "register">("register")
   const [loginEmail, setLoginEmail] = useState("")
   const [loginPassword, setLoginPassword] = useState("")
   const [registerEmail, setRegisterEmail] = useState("")
+  const [registerphoneNumber,setphoneNumber] = useState("")
   const [registerPassword, setRegisterPassword] = useState("")
   const [registerFullName, setRegisterFullName] = useState("")
-  const [registerPicture, setRegisterPicture] = useState<File | null>(null)
+  const [registerPicture, setRegisterPicture] = useState<string | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
-  const { login, register } = useAuth()
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+const {loadUser} = useAuth();
   const router = useRouter()
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-    setLoading(true)
+const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError("");
+  
+  setLoading(true);
 
-    const success = await login(loginEmail, loginPassword)
-    setLoading(false)
+  try {
+    const res = await UserService.login({
+      email: loginEmail,
+      password: loginPassword,
+    });
 
-    if (success) {
-      onClose()
-      router.push("/dashboard")
+
+    if (res.isSuccess) {
+      localStorage.setItem("token", res.token || "");
+document.cookie = `token=${res.token}; Path=/; SameSite=Lax; Max-Age=86400`;
+
+      await loadUser();
+      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+
+      router.push("/admin");
+                  toast.success("Welcome back 👊🔥");
+
+          setLoginEmail("")
+      setLoginPassword("")
+      onClose();
+
+      loadUser();
+      
+       const decoded: any = jwtDecode(res.token);
+  const decodedRole = decoded["role"] || decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
+
+  console.log("Decoded Role:", decodedRole);
+
+    if (decodedRole === "Admin") {
+      router.push("/admin");
+      return;
+    }
+
+    if (decodedRole === "Athelete") {
+      router.push("/dashboard");
+      return;
+    }
+
+
+
     } else {
-      setError("Invalid credentials. Try admin@mma.com / admin123 or any email with user123")
+      setError(res.message);
     }
+
+  } catch (err: any) {
+    console.log(err.message);
+    setError(err.message || "Login failed.");
   }
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-    setLoading(true)
+  setLoading(false);
+};
 
-    const success = await register(registerEmail, registerPassword, registerFullName)
-    setLoading(false)
 
-    if (success) {
-      onClose()
-      router.push("/dashboard")
+  //   if (success) {
+  //     onClose()
+  //     router.push("/dashboard")
+  //   } else {
+  //     setError("Invalid credentials. Try admin@mma.com / admin123 or any email with user123")
+  //   }
+  // }
+
+const handleRegister = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError("");
+  setLoading(true);
+
+  try {
+    const res = await UserService.register({
+      fullName: registerFullName,
+      email: registerEmail,
+      phoneNumber: registerphoneNumber,
+      password: registerPassword,
+      UserType: 3
+    },
+    selectedFile ?? undefined
+  );
+
+      if (res?.isSuccess) {
+      // Switch to login tab
+      toast.success("Account created successfully 🎉");
+      setActiveTab("login");
+      setLoginEmail(registerEmail)
+
+      // Clear fields
+      setRegisterFullName("");
+      setRegisterEmail("");
+      setphoneNumber("");
+      setRegisterPassword("");
+      setPreviewUrl(null);
     } else {
-      setError("Registration failed. Please try again.")
+      setError(res.message);
     }
+
+  } catch (err: any) {
+    setError(err.message || "Registration failed.");
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0]
-      setRegisterPicture(file)
-      const url = URL.createObjectURL(file)
-      setPreviewUrl(url)
-    }
+  setLoading(false);
+};
+
+
+
+  //   const success = await register(registerEmail, registerPassword, registerFullName)
+  //   setLoading(false)
+
+  //   if (success) {
+  //     onClose()
+  //     router.push("/dashboard")
+  //   } else {
+  //     setError("Registration failed. Please try again.")
+  //   }
+  // }
+
+ const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  if (e.target.files && e.target.files[0]) {
+    const file = e.target.files[0];
+    setSelectedFile(file);
+
+    const preview = URL.createObjectURL(file);
+    setPreviewUrl(preview);
   }
+};
+
 
   if (!isOpen) return null
 
@@ -135,12 +233,12 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                     exit={{ opacity: 0, x: 20 }}
                     transition={{ duration: 0.2 }}
                     onSubmit={handleLogin}
-                    className="space-y-6"
+                    className="space-y-3"
                   >
                     <div className="space-y-2">
                       <label className="text-xs font-heading tracking-wider text-primary uppercase">Email</label>
                       <input
-                        required
+                        
                         type="email"
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
@@ -152,7 +250,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                     <div className="space-y-2">
                       <label className="text-xs font-heading tracking-wider text-primary uppercase">Password</label>
                       <input
-                        required
+                        
                         type="password"
                         value={loginPassword}
                         onChange={(e) => setLoginPassword(e.target.value)}
@@ -161,15 +259,24 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                       />
                     </div>
 
-                    {error && <p className="text-sm text-red-500 text-center">{error}</p>}
-
+{error && (
+  <div className="w-full rounded-md bg-red-500/10 border border-red-500 text-red-400 px-4 py-1 text-sm whitespace-pre-line">
+    <div className="mt-1">{error}</div>
+  </div>
+)}
                     <Button
                       type="submit"
                       className="w-full bg-primary hover:bg-primary/90 text-white font-heading text-lg py-6 rounded-none mt-4"
                       disabled={loading}
                     >
-                      {loading ? "LOGGING IN..." : "LOGIN"}
-                    </Button>
+  {loading ? (
+    <div className="flex items-center justify-center gap-2">
+      <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+      Loading...
+    </div>
+  ) : (
+    "LOGIN"
+  )}                    </Button>
                     {/* <p className="text-xs text-zinc-500 text-center mt-4">
                       Demo: admin@mma.com / admin123 or any email / user123
                     </p> */}
@@ -182,24 +289,22 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.2 }}
                     onSubmit={handleRegister}
-                    className="space-y-6"
+                    className="space-y-2"
                   >
                     <div className="space-y-2">
                       <label className="text-xs font-heading tracking-wider text-primary uppercase">Full Name</label>
                       <input
-                        required
                         type="text"
                         value={registerFullName}
                         onChange={(e) => setRegisterFullName(e.target.value)}
                         className="w-full bg-black/50 border border-white/10 p-3 text-white focus:border-primary outline-none transition-colors placeholder:text-gray-600"
-                        placeholder="Enter your name"
+                        placeholder="FirstName & LastName"
                       />
                     </div>
 
                     <div className="space-y-2">
                       <label className="text-xs font-heading tracking-wider text-primary uppercase">Email</label>
                       <input
-                        required
                         type="email"
                         value={registerEmail}
                         onChange={(e) => setRegisterEmail(e.target.value)}
@@ -207,11 +312,22 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                         placeholder="your@email.com"
                       />
                     </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-xs font-heading tracking-wider text-primary uppercase">Phone Number</label>
+                      <input
+                        type="phoneNumbee"
+                        value={registerphoneNumber}
+                        onChange={(e) => setphoneNumber(e.target.value)}
+                        className="w-full bg-black/50 border border-white/10 p-3 text-white focus:border-primary outline-none transition-colors placeholder:text-gray-600"
+                        placeholder="+216 00000000"
+                      />
+                    </div>
 
                     <div className="space-y-2">
                       <label className="text-xs font-heading tracking-wider text-primary uppercase">Password</label>
                       <input
-                        required
+                        
                         type="password"
                         value={registerPassword}
                         onChange={(e) => setRegisterPassword(e.target.value)}
@@ -255,15 +371,26 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                       </div>
                     </div>
 
-                    {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+{error && (
+  <div className="w-full rounded-md bg-red-500/10 border border-red-500 text-red-400 px-4 py-1 text-sm whitespace-pre-line">
+    <div className="">{error}</div>
+  </div>
+)}
+
 
                     <Button
                       type="submit"
                       className="w-full bg-primary hover:bg-primary/90 text-white font-heading text-lg py-6 rounded-none mt-4"
                       disabled={loading}
                     >
-                      {loading ? "CREATING ACCOUNT..." : "CREATE ACCOUNT"}
-                    </Button>
+{loading ? (
+  <div className="flex items-center justify-center gap-2">
+    <span className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+    Processing...
+  </div>
+) : (
+  "CREATE ACCOUNT"
+)}                    </Button>
                   </motion.form>
                 )}
               </AnimatePresence>

@@ -317,7 +317,7 @@ function Contact({ onSendMessage }: { onSendMessage: (data: ContactMessageDTO) =
   const [form, setForm] = useState<ContactMessageDTO>({
     firstName: "",
     lastName: "",
-    email: "",
+    PhoneNumber: "",
     interest: "MMA",
     message: "",
   });
@@ -424,17 +424,18 @@ function Contact({ onSendMessage }: { onSendMessage: (data: ContactMessageDTO) =
                 </div>
               </div>
 
-              <div>
-                <label className="text-gray-400 text-sm">EMAIL</label>
-                <input
-                  name="email"
-                  type="email"
-                  value={form.email}
-                  onChange={update}
-                  required
-                  className="w-full bg-black/50 border border-white/10 p-3 text-white"
-                />
-              </div>
+          <div>
+  <label className="text-gray-400 text-sm">Phone Number</label>
+  <input
+    name="phoneNumber"
+    type="text"
+    value={form.PhoneNumber}
+    onChange={(e) =>
+      setForm({ ...form, PhoneNumber: e.target.value })
+    }
+    className="w-full bg-black/50 border border-white/10 p-3 text-white"
+  />
+</div>
 
               <div>
                 <label className="text-gray-400 text-sm">INTEREST</label>
