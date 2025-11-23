@@ -196,9 +196,9 @@ function Schedule({onBook}) {
             <h2 className="text-primary font-heading text-lg tracking-widest mb-2">TRAINING TIMES</h2>
             <h3 className="text-5xl md:text-6xl font-heading font-bold text-white">WEEKLY SCHEDULE</h3>
           </div>
-          <Button variant="outline" className="rounded-none border-white/20 hover:bg-white hover:text-black">
+          {/* <Button variant="outline" className="rounded-none border-white/20 hover:bg-white hover:text-black">
             DOWNLOAD PDF <ChevronRight className="ml-2 h-4 w-4" />
-          </Button>
+          </Button> */}
         </div>
 
         <Tabs defaultValue="Monday" className="w-full" onValueChange={setActiveDay}>
