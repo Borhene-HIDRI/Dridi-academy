@@ -10,7 +10,6 @@ const oswald = Oswald({ subsets: ['latin'], variable: '--font-heading' })
 export const metadata: Metadata = {
   title: 'Abderahmen Dridi MMA',
   description: 'Mixed Martial Arts School - Train with Champions',
-    generator: 'v0.app'
 }
 
 export default function RootLayout({

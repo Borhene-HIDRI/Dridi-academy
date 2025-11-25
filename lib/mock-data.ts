@@ -8,6 +8,7 @@ export interface Athlete {
   emergencyContact: string
   trainingCredits: number
   isMembershipActive: boolean
+  isApproved: boolean // Added approval status
   membershipExpiresOn: string
   totalClassesAttended: number
   totalBookings: number
@@ -34,14 +35,15 @@ export interface Message {
 export const mockAthletes: Athlete[] = [
   {
     id: "1",
-    fullName: "Borhene HIDRI",
-    email: "Borhene.hidri@gmail.com",
-    imageUrl: "/images/PHOTO.jpg",
+    fullName: "Mohamed Ben Ali",
+    email: "mohamed.benali@example.com",
+    imageUrl: "/placeholder.svg?height=100&width=100",
     phoneNumber: "+216 98 123 456",
     dateOfBirth: "1995-05-15",
     emergencyContact: "+216 98 654 321",
     trainingCredits: 12,
     isMembershipActive: true,
+    isApproved: true, // Set default approval
     membershipExpiresOn: "2025-12-31",
     totalClassesAttended: 45,
     totalBookings: 50,
@@ -66,6 +68,7 @@ export const mockAthletes: Athlete[] = [
     emergencyContact: "+216 99 765 432",
     trainingCredits: 8,
     isMembershipActive: true,
+    isApproved: true, // Set default approval
     membershipExpiresOn: "2025-11-30",
     totalClassesAttended: 28,
     totalBookings: 32,
@@ -88,6 +91,7 @@ export const mockAthletes: Athlete[] = [
     emergencyContact: "+216 97 876 543",
     trainingCredits: 3,
     isMembershipActive: false,
+    isApproved: true, // Set default approval
     membershipExpiresOn: "2024-10-15",
     totalClassesAttended: 15,
     totalBookings: 20,
@@ -106,6 +110,7 @@ export const mockAthletes: Athlete[] = [
     emergencyContact: "+216 96 987 654",
     trainingCredits: 20,
     isMembershipActive: true,
+    isApproved: true, // Set default approval
     membershipExpiresOn: "2026-01-31",
     totalClassesAttended: 78,
     totalBookings: 85,
@@ -123,6 +128,44 @@ export const mockAthletes: Athlete[] = [
       { month: "2024-04", status: "paid" },
       { month: "2024-05", status: "paid" },
     ],
+  },
+  {
+    id: "5",
+    fullName: "Omar Khedira",
+    email: "omar.khedira@example.com",
+    imageUrl: "/placeholder.svg?height=100&width=100",
+    phoneNumber: "+216 55 123 789",
+    dateOfBirth: "2001-04-12",
+    emergencyContact: "+216 55 987 321",
+    trainingCredits: 0,
+    isMembershipActive: false,
+    isApproved: false,
+    membershipExpiresOn: "",
+    totalClassesAttended: 0,
+    totalBookings: 0,
+    createdAt: "2024-06-25",
+    trainingPeriodStart: "",
+    trainingPeriodEnd: "",
+    paymentHistory: [],
+  },
+  {
+    id: "6",
+    fullName: "Leila Ben Sassi",
+    email: "leila.sassi@example.com",
+    imageUrl: "/placeholder.svg?height=100&width=100",
+    phoneNumber: "+216 22 456 123",
+    dateOfBirth: "1999-09-09",
+    emergencyContact: "+216 22 321 654",
+    trainingCredits: 0,
+    isMembershipActive: false,
+    isApproved: false,
+    membershipExpiresOn: "",
+    totalClassesAttended: 0,
+    totalBookings: 0,
+    createdAt: "2024-06-26",
+    trainingPeriodStart: "",
+    trainingPeriodEnd: "",
+    paymentHistory: [],
   },
 ]
 
@@ -203,4 +246,29 @@ export function markMessageAsRead(id: string): void {
     messages[index].read = true
     localStorage.setItem("mma_messages", JSON.stringify(messages))
   }
+}
+
+export function deleteMessage(id: string): void {
+  const messages = getMessages()
+  const filtered = messages.filter((m) => m.id !== id)
+  localStorage.setItem("mma_messages", JSON.stringify(filtered))
+}
+
+export function getPendingAthletes(): Athlete[] {
+  return getAthletes().filter((a) => !a.isApproved)
+}
+
+export function approveAthlete(athleteId: string): void {
+  const athletes = getAthletes()
+  const index = athletes.findIndex((a) => a.id === athleteId)
+  if (index !== -1) {
+    athletes[index].isApproved = true
+    athletes[index].isMembershipActive = true // Auto-activate membership on approval?
+    localStorage.setItem("mma_athletes", JSON.stringify(athletes))
+  }
+}
+
+export function rejectAthlete(athleteId: string): void {
+  // Rejecting essentially means deleting the request in this simple model
+  deleteAthlete(athleteId)
 }

@@ -24,3 +24,13 @@ export interface AuthResponse {
     userType: string;
   };
 }
+export interface User {
+  id: string;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  imageUrl?: string;
+  isApproved: boolean;
+  createdAt: string;
+}
+

@@ -35,6 +35,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 const {loadUser} = useAuth();
   const router = useRouter()
+  const[user,setUser] = useState();
 
 const handleLogin = async (e: React.FormEvent) => {
   e.preventDefault();
@@ -52,25 +53,25 @@ const handleLogin = async (e: React.FormEvent) => {
     if (res.isSuccess) {
       localStorage.setItem("token", res.token || "");
 document.cookie = `token=${res.token}; Path=/; SameSite=Lax; Max-Age=86400`;
-
+       const decoded: any = jwtDecode(res.token);
+      const UserFullName = decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"];
       await loadUser();
       
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
 
       router.push("/admin");
-                  toast.success("Welcome back 👊🔥");
+      
 
           setLoginEmail("")
       setLoginPassword("")
-      onClose();
 
-      loadUser();
+      // loadUser();
       
-       const decoded: any = jwtDecode(res.token);
   const decodedRole = decoded["role"] || decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
 
   console.log("Decoded Role:", decodedRole);
+toast.success(`Welcome back 👊🔥 ${UserFullName || ""} 👊🔥`);
 
     if (decodedRole === "Admin") {
       router.push("/admin");
@@ -81,6 +82,7 @@ document.cookie = `token=${res.token}; Path=/; SameSite=Lax; Max-Age=86400`;
       router.push("/dashboard");
       return;
     }
+      onClose();
 
 
 
@@ -207,7 +209,7 @@ const handleRegister = async (e: React.FormEvent) => {
 
               <div className="grid grid-cols-2 gap-2 mb-8 bg-black/30 p-1">
                 <button
-                  onClick={() => setActiveTab("login")}
+                  onClick={() =>{ setActiveTab("login"); setError("")  }}
                   className={`py-2 text-sm font-heading tracking-wider transition-colors ${
                     activeTab === "login" ? "bg-primary text-white" : "text-gray-400 hover:text-white"
                   }`}
@@ -215,7 +217,7 @@ const handleRegister = async (e: React.FormEvent) => {
                   LOGIN
                 </button>
                 <button
-                  onClick={() => setActiveTab("register")}
+                  onClick={() =>{ setActiveTab("register") ; setError(""); setPreviewUrl("")}}
                   className={`py-2 text-sm font-heading tracking-wider transition-colors ${
                     activeTab === "register" ? "bg-primary text-white" : "text-gray-400 hover:text-white"
                   }`}
@@ -261,7 +263,7 @@ const handleRegister = async (e: React.FormEvent) => {
 
 {error && (
   <div className="w-full rounded-md bg-red-500/10 border border-red-500 text-red-400 px-4 py-1 text-sm whitespace-pre-line">
-    <div className="mt-1">{error}</div>
+    <div className="">{error}</div>
   </div>
 )}
                     <Button

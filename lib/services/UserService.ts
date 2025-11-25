@@ -1,4 +1,6 @@
+import { resolve } from "path";
 import { api } from "../api";
+import { PendingUser } from "../types/member";
 import type { RegisterDTO, LoginDTO, AuthResponse } from "../types/user";
 import type { AxiosResponse } from "axios";
 
@@ -49,3 +51,13 @@ export const UserService = {
 
  
 };
+export async function getPendingUsers(): Promise<PendingUser[]> {
+ return api.get<PendingUser[]>("/User/pending");
+}
+export async function approveUser(userId: string): Promise<string> {
+  return api.post<string>(`/User/approve/${userId}`);
+}
+
+export async function rejectUser(userId: string): Promise<string> {
+  return api.delete<string>(`/User/${userId}`);
+}

@@ -449,6 +449,8 @@ function Contact({ onSendMessage }: { onSendMessage: (data: ContactMessageDTO) =
                   <option value="Kickboxing">Kickboxing</option>
                   <option value="BJJ">BJJ</option>
                   <option value="Kids Class">Kids Class</option>
+                                    <option value="Colab">Collaboration</option>
+
                 </select>
               </div>
 

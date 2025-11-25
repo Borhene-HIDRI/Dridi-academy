@@ -10,6 +10,8 @@ interface User {
   imageUrl?: string;
   userType: number;
   role: string; // computed from userType
+    isApproved: boolean;
+
 }
 
 interface AuthContextType {
