@@ -118,6 +118,15 @@ async function loadPendingUsers() {
 
         setMessages(prev => [msg, ...prev]);
       });
+      connection.on("NewPendingUser", (user: PendingUser) => {
+  console.log("New pending user received:", user);
+  setPendingUsers(prev => [user, ...prev]);
+});
+connection.on("UserApproved", (data: { id: string }) => {
+  console.log("User approved:", data.id);
+  // setPendingUsers(prev => prev.filter(u => u.id !== data.id));
+});
+
 
     } catch (err) {
       console.error("❌ SignalR connection failed:", err);
@@ -253,7 +262,7 @@ const handleDeleteMessage = (message: ContactMessageResponse) => {
       <DashboardLayout title="Admin Dashboard" description="">
         <Tabs defaultValue="athletes" className="w-full" onValueChange={setActiveTab}>
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-            <TabsList className="bg-zinc-900/50 border border-white/10 p-1.5 space-x-5 backdrop-blur-sm">
+            <TabsList className="bg-zinc-900/50 border  border-white/10 p-1.5 space-x-5 backdrop-blur-sm">
               <TabsTrigger
                 value="athletes"
                 className="data-[state=active]:bg-primary  data-[state=active]:text-white font-heading tracking-wider px-6 py-2.5 transition-all"
@@ -431,7 +440,7 @@ const handleDeleteMessage = (message: ContactMessageResponse) => {
                        <Button
   disabled={loadingAction?.id === user.id && loadingAction.type === "approve"}
   onClick={() => handleApprove(user)}
-  className="bg-green-600 hover:bg-green-700 text-white font-heading tracking-wider px-6 cursor-pointer"
+  className="bg-green-600 hover:bg-green-700 text-white font-heading tracking-wider px-6"
 >
   {loadingAction?.id === user.id && loadingAction.type === "approve" ? (
     <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -446,7 +455,7 @@ const handleDeleteMessage = (message: ContactMessageResponse) => {
 <Button
   disabled={loadingAction?.id === user.id && loadingAction.type === "reject"}
   onClick={() => handleReject(user)}
-  className="bg-red-600 cursor-pointer hover:bg-red-700 text-white font-heading tracking-wider px-6"
+  className="bg-red-600 hover:bg-red-700 text-white font-heading tracking-wider px-6"
 >
   {loadingAction?.id === user.id && loadingAction.type === "reject" ? (
     <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
