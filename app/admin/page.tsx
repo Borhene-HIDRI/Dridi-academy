@@ -5,7 +5,17 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, Mail, Phone, Calendar, Check, X, UserPlus, Users, Trash2, MessageSquare } from "lucide-react"
+import { Search, Mail, Phone, Calendar, Check, X, UserPlus, Users, Trash2, MessageSquare, Filter } from "lucide-react"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination"
+
 import {
   type Athlete,
   type Message,
@@ -18,7 +28,7 @@ import {
 import { AthleteModal } from "@/components/athlete-modal"
 import { format } from "date-fns"
 import { delay, motion } from "framer-motion"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner";
 import { ConfirmationDialog } from "@/components/confirmation-dialog"
 import { ContactMessageResponse } from "@/lib/types/contact"
 import { deleteMessage, GetMessages, markMessageAsRead } from "@/lib/services/ContactService"
@@ -27,19 +37,37 @@ import { approveUser, getPendingUsers, rejectUser } from "@/lib/services/UserSer
 import { HubConnection, HubConnectionBuilder } from "@microsoft/signalr";
 
 export default function AdminDashboard() {
+const FILTER_OPTIONS = [
+  { value: "all", label: "All Members" },
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+]
+  const [messageFilterInterest, setMessageFilterInterest] = useState("all")
+const [selectedPendingUsers, setSelectedPendingUsers] = useState<(string | number|any)[]>([]);
+const [pendingSearch, setPendingSearch] = useState("");
+
+  const [messageFilterStatus, setMessageFilterStatus] = useState("all")
+  const [currentMessagePage, setCurrentMessagePage] = useState(1)
   const [activeTab, setActiveTab] = useState("athletes")
   const [searchTerm, setSearchTerm] = useState("")
   const [athletes, setAthletes] = useState<Athlete[]>([])
   const [pendingAthletes, setPendingAthletes] = useState<Athlete[]>([])
   // const [messages, setMessages] = useState<Message[]>([])
+  const [filterStatus, setFilterStatus] = useState("all")
 
   const [messages,setMessages] = useState<ContactMessageResponse[]>([]);
+  const [currentPage, setCurrentPage] = useState(1)
 
   const [selectedAthlete, setSelectedAthlete] = useState<Athlete | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
 const [loadingAction, setLoadingAction] = useState<{id: string, type: "approve" | "reject"} | null>(null);
-  const [confirmDialog, setConfirmDialog] = useState<{
+const [selectedMessages, setSelectedMessages] = useState<(string | number)[]>([]);
+const [messageSearchTerm, setMessageSearchTerm] = useState("");
+
+const ITEMS_PER_PAGE = 6
+const MESSAGES_PER_PAGE = 5
+const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean
     title: string
     description: string
@@ -51,7 +79,6 @@ const [loadingAction, setLoadingAction] = useState<{id: string, type: "approve" 
     description: "",
     onConfirm: () => {},
   })
-  const { toast } = useToast()
 
 async function loadMessages(){
   try{
@@ -140,10 +167,116 @@ connection.on("UserApproved", (data: { id: string }) => {
   };
 }, []);
 
+const togglePendingSelection = (id: string | number) => {
+  setSelectedPendingUsers(prev =>
+    prev.includes(id) ? prev.filter(u => u !== id) : [...prev, id]
+  );
+};
 
-  const filteredAthletes = athletes.filter((athlete) =>
-    athlete.fullName.toLowerCase().includes(searchTerm.toLowerCase()),
+const toggleSelectAllPending = () => {
+  if (selectedPendingUsers.length === paginatedPending.length) {
+    setSelectedPendingUsers([]);
+  } else {
+    setSelectedPendingUsers(paginatedPending.map(u => u.id));
+  }
+};
+
+const approveSelected = () => {
+  if (selectedPendingUsers.length === 0) return;
+
+  setConfirmDialog({
+    isOpen: true,
+    title: "Approve Selected Users",
+    description: `Are you sure you want to approve ${selectedPendingUsers.length} users?`,
+    variant: "warning",
+    onConfirm: async () => {
+      for (const id of selectedPendingUsers) {
+        await approveUser(id);
+      }
+
+      setPendingUsers(prev => prev.filter(u => !selectedPendingUsers.includes(u.id)));
+      setSelectedPendingUsers([]);
+    }
+  });
+};
+
+const rejectSelected = () => {
+  if (selectedPendingUsers.length === 0) return;
+
+  setConfirmDialog({
+    isOpen: true,
+    title: "Reject Selected Users",
+    description: `Are you sure you want to reject ${selectedPendingUsers.length} users?`,
+    variant: "danger",
+    onConfirm: async () => {
+      for (const id of selectedPendingUsers) {
+        await rejectUser(id);
+      }
+
+      setPendingUsers(prev => prev.filter(u => !selectedPendingUsers.includes(u.id)));
+      setSelectedPendingUsers([]);
+    }
+  });
+};
+const filteredPending = pendingUsers.filter((u) => {
+  const text = (
+    u.fullName +
+    " " +
+    u.email +
+    " " +
+    u.phoneNumber
+  ).toLowerCase();
+
+  return text.includes(pendingSearch.toLowerCase());
+});
+
+// 2️⃣ Pagination for pending users (same logic as athletes)
+const PENDING_PER_PAGE = 5;
+
+const totalPendingPages = Math.ceil(filteredPending.length / PENDING_PER_PAGE);
+
+const paginatedPending = filteredPending.slice(
+  (currentPage - 1) * PENDING_PER_PAGE,
+  currentPage * PENDING_PER_PAGE
+);
+ const filteredAthletes = athletes
+    .filter((athlete) => athlete.fullName.toLowerCase().includes(searchTerm.toLowerCase()))
+    .filter((athlete) => {
+      if (filterStatus === "active") return athlete.isMembershipActive
+      if (filterStatus === "inactive") return !athlete.isMembershipActive
+      return true
+    })
+
+  const totalPages = Math.ceil(filteredAthletes.length / ITEMS_PER_PAGE)
+  const paginatedAthletes = filteredAthletes.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, filterStatus])
+  
+const filteredMessages = messages
+    .filter((message) =>
+      `${message.firstName} ${message.lastName}`.toLowerCase().includes(messageSearchTerm.toLowerCase()),
+    )
+    .filter((message) => {
+      if (messageFilterStatus === "read") return message.isRead
+      if (messageFilterStatus === "unread") return !message.isRead
+      return true
+    })
+    .filter((message) => {
+      if (messageFilterInterest === "all") return true
+      return message.interest.toLowerCase() === messageFilterInterest.toLowerCase()
+    })
+
+  const totalMessagePages = Math.ceil(filteredMessages.length / MESSAGES_PER_PAGE)
+  const paginatedMessages = filteredMessages.slice(
+    (currentMessagePage - 1) * MESSAGES_PER_PAGE,
+    currentMessagePage * MESSAGES_PER_PAGE,
   )
+
+  useEffect(() => {
+    setCurrentMessagePage(1)
+  }, [messageSearchTerm, messageFilterStatus, messageFilterInterest])
+
 const delay = (ms: number) => 
   new Promise(resolve => setTimeout(resolve, ms));
 const handleApprove = (user: PendingUser) => {
@@ -164,20 +297,17 @@ const handleApprove = (user: PendingUser) => {
         setPendingUsers(prev => prev.filter(u => u.id !== user.id));
 
         // 3️⃣ Toast succès
-        toast({
-          title: "User Approved",
-          description: `${user.fullName} is now approved.`,
-          className: "bg-green-900 border-green-700 text-white"
-        });
+       toast.success("Event has been created.")
+
 
       } catch (err) {
         // 4️⃣ Gestion erreur
-        console.error(err);
-        toast({
-          title: "Error",
-          description: "Failed to approve user.",
-          className: "bg-red-900 border-red-700 text-white"
-        });
+        // console.error(err);
+        // toast({
+        //   title: "Error",
+        //   description: "Failed to approve user.",
+        //   className: "bg-red-900 border-red-700 text-white"
+        // });
       } finally {
         // 5️⃣ Fermer la modale
         setConfirmDialog(prev => ({ ...prev, isOpen: false }));
@@ -203,17 +333,17 @@ const handleApprove = (user: PendingUser) => {
 
         setPendingUsers(prev => prev.filter(u => u.id !== user.id));
 
-        toast({
-          title: "User Rejected",
-          description: `${user.fullName}'s application has been removed.`,
-          className: "bg-red-900 border-red-700 text-white",
-        });
+        // toast({
+        //   title: "User Rejected",
+        //   description: `${user.fullName}'s application has been removed.`,
+        //   className: "bg-red-900 border-red-700 text-white",
+        // });
       } catch (err) {
-        toast({
-          title: "Error",
-          description: "Failed to reject user.",
-          className: "bg-zinc-900 border-zinc-800 text-white",
-        });
+        // toast({
+        //   title: "Error",
+        //   description: "Failed to reject user.",
+        //   className: "bg-zinc-900 border-zinc-800 text-white",
+        // });
       } finally {
         setLoadingAction(null);
         setConfirmDialog(prev => ({ ...prev, isOpen: false }));
@@ -222,6 +352,41 @@ const handleApprove = (user: PendingUser) => {
   });
 };
 
+const toggleMessageSelection = (id: string |number) => {
+  setSelectedMessages(prev =>
+    prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]
+  );
+};
+
+const toggleSelectAllMessages = () => {
+  if (selectedMessages.length === paginatedMessages.length) {
+    setSelectedMessages([]);
+  } else {
+    setSelectedMessages(paginatedMessages.map((m) => m.id));
+  }
+};
+
+const deleteSelectedMessages = async () => {
+  if (selectedMessages.length === 0) return;
+
+  setConfirmDialog({
+    isOpen: true,
+    title: "Delete Selected Messages",
+    description: `Are you sure you want to delete ${selectedMessages.length} message(s)?`,
+    variant: "danger",
+    onConfirm: async () => {
+      try {
+        for (const id of selectedMessages) {
+          await deleteMessage(id);
+        }
+        setMessages(prev => prev.filter(m => !selectedMessages.includes(m.id)));
+        setSelectedMessages([]);
+      } catch (error) {
+        console.error(error);
+      }
+    },
+  });
+};
 
 const handleDeleteMessage = (message: ContactMessageResponse) => {
   setConfirmDialog({
@@ -239,18 +404,18 @@ const handleDeleteMessage = (message: ContactMessageResponse) => {
         setMessages(prev => prev.filter(m => m.id !== message.id))
 
         // 3️⃣ Toast UI
-        toast({
-          title: "Message Deleted",
-          description: "The message has been permanently deleted.",
-          className: "bg-red-900 border-red-800 text-white",
-        })
+        // toast({
+        //   title: "Message Deleted",
+        //   description: "The message has been permanently deleted.",
+        //   className: "bg-red-900 border-red-800 text-white",
+        // })
       } catch (error) {
         console.error(error)
-        toast({
-          title: "Error",
-          description: "Failed to delete message.",
-          className: "bg-zinc-900 border-zinc-800 text-white",
-        })
+        // toast({
+        //   title: "Error",
+        //   description: "Failed to delete message.",
+        //   className: "bg-zinc-900 border-zinc-800 text-white",
+        // })
       }
     },
   })
@@ -308,105 +473,230 @@ const isLoading = (userId: string, actionType: "approve" | "reject" | "delete") 
               </TabsTrigger>
             </TabsList>
 
-            {activeTab === "athletes" && (
-              <div className="relative w-full md:w-80">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
-                <Input
-                  placeholder="Search athletes by name..."
-                  className="pl-10 bg-zinc-900/50 border-white/10 text-white focus:border-primary h-11"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+          {activeTab === "athletes" && (
+              <div className="flex gap-3 w-full md:w-auto flex-col sm:flex-row">
+                <div className="relative flex-1 sm:flex-initial">
+                  <Filter className="absolute left-3 top-3.5 h-4 w-4 text-orange-500" />
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="pl-10 pr-4 py-2.5 bg-zinc-900/50 border border-white/10 text-white rounded hover:border-primary/30 focus:border-primary transition-colors appearance-none cursor-pointer text-sm font-medium"
+                  >
+                    {FILTER_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value} className="bg-zinc-900  text-white">
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="relative flex-1 sm:flex-initial sm:w-80">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-orange-500" />
+                  <Input
+                    placeholder="Looking for a member ?"
+                    className="pl-10 bg-zinc-900/50 border-white/10 text-white focus:border-primary h-11 text-sm"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
               </div>
             )}
           </div>
-
-          <TabsContent value="athletes" className="mt-0">
-            {/* <p className="text-zinc-400 text-sm mb-6 bg-zinc-900/30 p-4 border border-white/10 rounded">
-              <strong className="text-primary">Members Management:</strong> Click on any athlete to view their complete
-              profile, track their membership status, manage training credits, and visualize their payment history with
-              an interactive calendar.
-            </p> */}
-
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {filteredAthletes.map((athlete, idx) => (
-                <motion.div
-                  key={athlete.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.05 }}
-                  onClick={() => {
-                    setSelectedAthlete(athlete)
-                    setIsModalOpen(true)
-                  }}
-                  className="group relative overflow-hidden bg-gradient-to-br from-zinc-900/90 to-zinc-900/50 border border-white/10 p-6 hover:border-primary/50 transition-all cursor-pointer hover:shadow-2xl hover:shadow-primary/10"
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border-2 border-white/20 group-hover:border-primary transition-colors">
-                      <img
-                        src={athlete.imageUrl || "/placeholder.svg"}
-                        alt={athlete.fullName}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-heading font-bold text-xl text-white group-hover:text-primary transition-colors mb-1 truncate">
-                        {athlete.fullName}
-                      </h3>
-                      <p className="text-sm text-zinc-400 flex items-center gap-1.5 mb-3">
-                        <Phone className="h-3 w-3" />
-                        {athlete.phoneNumber}
-                      </p>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span
-                          className={`px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-full ${
-                            athlete.isMembershipActive
-                              ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                              : "bg-red-500/20 text-red-400 border border-red-500/30"
-                          }`}
-                        >
-                          {athlete.isMembershipActive ? "Active" : "Inactive"}
-                        </span>
-                        <span className="text-xs text-zinc-500 font-mono bg-zinc-800/50 px-2 py-1 rounded">
-                          {athlete.trainingCredits} Credits
-                        </span>
-                      </div>
-                    </div>
+ <TabsContent value="athletes" className="mt-0">
+            <div className="space-y-6">
+              {paginatedAthletes.length > 0 ? (
+                <>
+                  <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 auto-rows-max">
+                    {paginatedAthletes.map((athlete, idx) => (
+                      <motion.div
+                        key={athlete.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.05 }}
+                        onClick={() => {
+                          setSelectedAthlete(athlete)
+                          setIsModalOpen(true)
+                        }}
+                        className="group relative overflow-hidden bg-gradient-to-br from-zinc-900/90 to-zinc-900/50 border border-white/10 p-6 hover:border-primary/50 transition-all cursor-pointer hover:shadow-2xl hover:shadow-primary/10 rounded-lg"
+                      >
+                        <div className="flex items-start gap-4 h-full">
+                          <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border-2 border-white/20 group-hover:border-primary transition-colors">
+                            <img
+                              src={athlete.imageUrl || "/placeholder.svg"}
+                              alt={athlete.fullName}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-heading font-bold text-lg text-white group-hover:text-primary transition-colors mb-2 truncate">
+                              {athlete.fullName}
+                            </h3>
+                            <p className="text-xs text-zinc-400 flex items-center gap-1.5 mb-3">
+                              <Phone className="h-3 w-3 shrink-0" />
+                              {athlete.phoneNumber}
+                            </p>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span
+                                className={`px-2.5 py-1 text-xs font-bold uppercase tracking-wider rounded-full ${
+                                  athlete.isMembershipActive
+                                    ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                                    : "bg-red-500/20 text-red-400 border border-red-500/30"
+                                }`}
+                              >
+                                {athlete.isMembershipActive ? "Active" : "Inactive"}
+                              </span>
+                              <span className="text-xs text-zinc-500 font-mono bg-zinc-800/50 px-2 py-1 rounded">
+                                {athlete.trainingCredits} Credits
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
                   </div>
-                </motion.div>
-              ))}
+
+                  {totalPages > 1 && (
+                    <div className="flex justify-center mt-8 pt-6 border-t border-white/10">
+                      <Pagination>
+                        <PaginationContent>
+                          <PaginationItem>
+                            <PaginationPrevious
+                              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                              className={`${currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}`}
+                            />
+                          </PaginationItem>
+
+                          {Array.from({ length: totalPages }, (_, i) => {
+                            const pageNum = i + 1
+                            const isActive = pageNum === currentPage
+                            const isVisible =
+                              pageNum === 1 || pageNum === totalPages || Math.abs(pageNum - currentPage) <= 1
+
+                            if (!isVisible && i > 0 && i < totalPages - 1) {
+                              if (i === 1) {
+                                return (
+                                  <PaginationItem key="ellipsis-start">
+                                    <PaginationEllipsis />
+                                  </PaginationItem>
+                                )
+                              }
+                              return null
+                            }
+
+                            return (
+                              <PaginationItem key={pageNum}>
+                                <PaginationLink
+                                  isActive={isActive}
+                                  onClick={() => setCurrentPage(pageNum)}
+                                  className="cursor-pointer"
+                                >
+                                  {pageNum}
+                                </PaginationLink>
+                              </PaginationItem>
+                            )
+                          })}
+
+                          <PaginationItem>
+                            <PaginationNext
+                              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                              className={`${
+                                currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"
+                              }`}
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
+                    </div>
+                  )}
+
+                  <div className="text-center text-sm text-zinc-400 mt-4">
+                    Showing {paginatedAthletes.length} of {filteredAthletes.length} members
+                    {filterStatus !== "all" && ` (${filterStatus})`}
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-20 mt-8">
+                  <Users className="h-16 w-16 mx-auto mb-4 text-zinc-700" />
+                  <p className="text-zinc-500 text-lg font-heading">No Members found</p>
+                  <p className="text-zinc-600 text-sm mt-2">
+                    {searchTerm ? "Try adjusting your search criteria" : "Approve pending athletes to see them here"}
+                  </p>
+                </div>
+              )}
             </div>
-            {filteredAthletes.length === 0 && (
-              <div className="text-center py-20 mt-8">
-                <Users className="h-16 w-16 mx-auto mb-4 text-zinc-700" />
-                <p className="text-zinc-500 text-lg ">No Member found</p>
-                <p className="text-zinc-600 text-sm mt-2">
-                  {searchTerm ? "" : "Approve pending athletes to see them here"}
-                </p>
-              </div>
-            )}
           </TabsContent>
 
           <TabsContent value="approvals" className="mt-0">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
+
+  {/* Search */}
+  <div className="relative w-full sm:w-80">
+    <Search className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
+    <Input
+      placeholder="Search pending users..."
+      className="pl-10 bg-zinc-900/50 border-white/10 text-white"
+      value={pendingSearch}
+      onChange={(e) => setPendingSearch(e.target.value)}
+    />
+  </div>
+
+  {/* Bulk Actions */}
+  <div className="flex items-center gap-3">
+    <Button
+      onClick={toggleSelectAllPending}
+      variant="outline"
+      className="border-white/20 text-white"
+    >
+      {selectedPendingUsers.length === paginatedPending.length
+        ? "Unselect All"
+        : "Select All"}
+    </Button>
+
+    <Button
+      onClick={approveSelected}
+      className="bg-green-600 hover:bg-green-700 text-white"
+      disabled={selectedPendingUsers.length === 0}
+    >
+      <Check className="w-4 h-4 mr-2" />
+      Approve Selected
+    </Button>
+
+    <Button
+      onClick={rejectSelected}
+      className="bg-red-600 hover:bg-red-700 text-white"
+      disabled={selectedPendingUsers.length === 0}
+    >
+      <X className="w-4 h-4 mr-2" />
+      Reject Selected
+    </Button>
+  </div>
+</div>
+
             <div className="space-y-4">
               {pendingUsers.length === 0 ? (
                 <div className="text-center py-20 bg-zinc-900/30 border border-dashed border-white/10">
                   <UserPlus className="h-16 w-16 mx-auto mb-4 text-zinc-700" />
                   <p className="text-zinc-500 text-lg font-heading">No pending approvals</p>
-                  <p className="text-zinc-600 text-sm mt-2">All applications have been processed</p>
                 </div>
               ) : (
-                <div className="grid gap-4">
+<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
                   {pendingUsers.map((user, idx) => (
                     <motion.div
                       key={user.id}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: idx * 0.1 }}
-                      className="flex flex-col lg:flex-row items-center justify-between bg-gradient-to-r from-zinc-900 to-zinc-900/50 border border-white/10 p-6 gap-6 hover:border-primary/30 transition-all group"
+className="relative bg-gradient-to-br from-zinc-900/90 to-zinc-900/50 border  border-white/10 p-6 rounded-lg hover:border-primary/30 transition-all"
                     >
+    
                       <div className="flex items-center gap-6 w-full lg:w-auto">
+                                     <input
+    type="checkbox"
+    checked={selectedPendingUsers.includes(user.id)}
+    onChange={() => togglePendingSelection(user.id)}
+    className=" top-4  left-4 h-5 w-5 accent-primary cursor-pointer"
+  />    
                         <div className="h-24 w-24 rounded-full border-2 border-primary/30 overflow-hidden shrink-0 group-hover:border-primary transition-colors">
+                 
                  <div className="relative h-24 w-24 rounded-full border-2 border-primary/30 overflow-hidden shrink-0 group-hover:border-primary transition-colors bg-zinc-800 flex items-center justify-center">
   {user.imageUrl ? (
     <img
@@ -441,35 +731,40 @@ const isLoading = (userId: string, actionType: "approve" | "reject" | "delete") 
                         </div>
                       </div>
                       <div className="flex items-center gap-3 w-full lg:w-auto shrink-0">
-                       <Button
-  disabled={isLoading(user.id, "approve")}
-  onClick={() => handleApprove(user)}
-  className="bg-green-600 hover:bg-green-700 text-white font-heading tracking-wider px-6"
->
-  {isLoading(user.id, "approve") ? (
-    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-  ) : (
-    <>
-      <Check className="mr-2 h-4 w-4" />
-      Approve
-    </>
-  )}
-</Button>
+<div className="flex items-center gap-3 mt-4 ">
+  {/* APPROVE */}
+  <Button
+    disabled={isLoading(user.id, "approve")}
+    onClick={() => handleApprove(user)}
+    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md flex items-center gap-2 min-w-[110px] justify-center"
+  >
+    {isLoading(user.id, "approve") ? (
+      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+    ) : (
+      <>
+        <Check className="h-4 w-4" />
+        <span className="font-heading text-sm">Approve</span>
+      </>
+    )}
+  </Button>
 
-<Button
-  disabled={isLoading(user.id, "reject")}
-  onClick={() => handleReject(user)}
-  className="bg-red-600 hover:bg-red-700 text-white font-heading tracking-wider px-6"
->
-  {isLoading(user.id, "reject") ? (
-    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-  ) : (
-    <>
-      <X className="mr-2 h-4 w-4" />
-      Reject
-    </>
-  )}
-</Button>
+  {/* REJECT */}
+  <Button
+    disabled={isLoading(user.id, "reject")}
+    onClick={() => handleReject(user)}
+    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md flex items-center gap-2 min-w-[110px] justify-center"
+  >
+    {isLoading(user.id, "reject") ? (
+      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+    ) : (
+      <>
+        <X className="h-4 w-4" />
+        <span className="font-heading text-sm">Reject</span>
+      </>
+    )}
+  </Button>
+</div>
+
 
                       </div>
                     </motion.div>
@@ -479,87 +774,199 @@ const isLoading = (userId: string, actionType: "approve" | "reject" | "delete") 
             </div>
           </TabsContent>
 
-          <TabsContent value="messages" className="mt-0">
+
+     <TabsContent value="messages" className="mt-0">
             <div className="space-y-4">
-              {messages.length === 0 ? (
+              {/* SEARCH + ACTIONS */}
+<div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
+  
+  {/* Search */}
+  <div className="relative w-full sm:w-80">
+    <Search className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
+    <Input
+      placeholder="Search messages..."
+      className="pl-10 bg-zinc-900/50 border-white/10 text-white"
+      value={messageSearchTerm}
+      onChange={(e) => setMessageSearchTerm(e.target.value)}
+    />
+  </div>
+
+  <div className="flex items-center gap-3">
+    <Button
+      onClick={toggleSelectAllMessages}
+      variant="outline"
+      className="border-white/20 text-white"
+    >
+      {selectedMessages.length === paginatedMessages.length
+        ? "Unselect All"
+        : "Select All"}
+    </Button>
+
+    <Button
+      onClick={deleteSelectedMessages}
+      className="bg-red-600 hover:bg-red-700 text-white"
+      disabled={selectedMessages.length === 0}
+    >
+      <Trash2 className="w-4 h-4 mr-2" />
+      Delete Selected
+    </Button>
+  </div>
+</div>
+              {paginatedMessages.length === 0 ? (
                 <div className="text-center py-20 bg-zinc-900/30 border border-dashed border-white/10">
                   <MessageSquare className="h-16 w-16 mx-auto mb-4 text-zinc-700" />
                   <p className="text-zinc-500 text-lg font-heading">No messages yet</p>
-                  <p className="text-zinc-600 text-sm mt-2">Contact form submissions will appear here</p>
                 </div>
               ) : (
-                messages.map((message, idx) => (
-                  <motion.div
-                    key={message.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.05 }}
-                    className={`p-6 border rounded-lg transition-all ${
-                      message.isRead
-                        ? "bg-zinc-900/20 border-white/5"
-                        : "bg-zinc-900/60 border-primary/30 shadow-lg shadow-primary/5"
-                    }`}
-                  >
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h4 className="font-heading font-bold text-xl text-white">
-                            {message.firstName} {message.lastName}
-                          </h4>
-                          {!message.isRead && (
-                            <span className="px-2 py-0.5 bg-primary/20 text-primary text-[10px] font-bold uppercase tracking-wider rounded-full border border-primary/30">
-                              New
+                <>
+                  <div className="space-y-4">
+                    {paginatedMessages.map((message, idx) => (
+                     <motion.div
+  key={message.id}
+  initial={{ opacity: 0, y: 10 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ delay: idx * 0.05 }}
+  className={`relative p-6 border rounded-lg transition-all ${
+    message.isRead
+      ? "bg-zinc-900/20 border-white/5"
+      : "bg-zinc-900/60 border-primary/30 shadow-lg shadow-primary/5"
+  }`}
+>
+
+  {/* Checkbox */}
+ 
+
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h4 className="font-heading font-bold text-xl text-white">
+                               <input
+    type="checkbox"
+    checked={selectedMessages.includes(message.id)}
+    onChange={() => toggleMessageSelection(message.id)}
+    className=" top-4 mr-2 left-4 h-4 w-4 accent-primary cursor-pointer"
+  />
+                                {message.firstName} {message.lastName}
+                              </h4>
+                              {!message.isRead && (
+                                <span className="px-2 py-0.5 bg-primary/20 text-primary text-[10px] font-bold uppercase tracking-wider rounded-full border border-primary/30">
+                                  New
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-primary text-sm uppercase tracking-wider font-heading">
+                              Interested in: {message.interest}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-zinc-500 font-mono">
+                              {format(new Date(message.createdAt), "MMM dd, HH:mm")}
                             </span>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleDeleteMessage(message)}
+                              className="text-red-500 hover:text-red-400 hover:bg-red-500/10 cursor-pointer"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        <p className="text-zinc-300 mb-4 font-sans leading-relaxed bg-black/20 p-4 rounded border border-white/5">
+                          {message.message}
+                        </p>
+                        <div className="flex justify-between items-center pt-4 border-t border-white/5">
+                          <a className="text-sm text-zinc-400 hover:text-primary flex items-center gap-2 transition-colors font-heading tracking-wide">
+                            <Phone className="h-4 w-4" />
+                            {message.phoneNumber}
+                          </a>
+                          {!message.isRead && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                markMessageAsRead(message.id)
+                                setMessages((prev) =>
+                                  prev.map((m) =>
+                                    m.id === message.id
+                                      ? {
+                                          ...m,
+                                          isRead: true,
+                                        }
+                                      : m,
+                                  ),
+                                )
+                              }}
+                              className="text-xs text-primary hover:text-primary hover:bg-primary/10 font-heading tracking-wider cursor-pointer"
+                            >
+                              Mark as Read
+                            </Button>
                           )}
                         </div>
-                        <p className="text-primary text-sm uppercase tracking-wider font-heading">
-                          Interested in: {message.interest}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-zinc-500 font-mono">
-                          {format(new Date(message.createdAt), "MMM dd, HH:mm")}
-                        </span>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleDeleteMessage(message)}
-                          className="text-red-500 hover:text-red-400 hover:bg-red-500/10 cursor-pointer"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      </motion.div>
+                    ))}
+                  </div>
+
+                  {totalMessagePages > 1 && (
+                    <div className="flex justify-center mt-8 pt-6 border-t border-white/10">
+                      <Pagination>
+                        <PaginationContent>
+                          <PaginationItem>
+                            <PaginationPrevious
+                              onClick={() => setCurrentMessagePage((prev) => Math.max(1, prev - 1))}
+                              className={`${currentMessagePage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}`}
+                            />
+                          </PaginationItem>
+
+                          {Array.from({ length: totalMessagePages }, (_, i) => {
+                            const pageNum = i + 1
+                            const isActive = pageNum === currentMessagePage
+                            const isVisible =
+                              pageNum === 1 ||
+                              pageNum === totalMessagePages ||
+                              Math.abs(pageNum - currentMessagePage) <= 1
+
+                            if (!isVisible && i > 0 && i < totalMessagePages - 1) {
+                              if (i === 1) {
+                                return (
+                                  <PaginationItem key="ellipsis-start">
+                                    <PaginationEllipsis />
+                                  </PaginationItem>
+                                )
+                              }
+                              return null
+                            }
+
+                            return (
+                              <PaginationItem key={pageNum}>
+                                <PaginationLink
+                                  isActive={isActive}
+                                  onClick={() => setCurrentMessagePage(pageNum)}
+                                  className="cursor-pointer"
+                                >
+                                  {pageNum}
+                                </PaginationLink>
+                              </PaginationItem>
+                            )
+                          })}
+
+                          <PaginationItem>
+                            <PaginationNext
+                              onClick={() => setCurrentMessagePage((prev) => Math.min(totalMessagePages, prev + 1))}
+                              className={`${currentMessagePage === totalMessagePages ? "pointer-events-none opacity-50" : "cursor-pointer"}`}
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
                     </div>
-                    <p className="text-zinc-300 mb-4 font-sans leading-relaxed bg-black/20 p-4 rounded border border-white/5">
-                      {message.message}
-                    </p>
-                    <div className="flex justify-between items-center pt-4 border-t border-white/5">
-                      <a
-                        // href={`mailto:${message.email}`}
-                        className="text-sm text-zinc-400 hover:text-primary flex items-center gap-2 transition-colors font-heading tracking-wide"
-                      >
-                        <Phone className="h-4 w-4" />
-                        {message.phoneNumber}
-                      </a>
-                      {!message.isRead && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            markMessageAsRead(message.id)
-                            // refreshData()
-                            setMessages(prev => prev.map(m =>m.id === message.id ? {
-                              ...m,isRead:true
-                            }:m))
-                          }}
-                          className="text-xs text-primary hover:text-primary hover:bg-primary/10 font-heading tracking-wider cursor-pointer"
-                        >
-                          Mark as Read
-                        </Button>
-                      )}
-                    </div>
-                  </motion.div>
-                ))
+                  )}
+
+                  <div className="text-center text-sm text-zinc-400 mt-4">
+                    Showing {paginatedMessages.length} of {filteredMessages.length} messages
+                    {messageFilterStatus !== "all" && ` (${messageFilterStatus})`}
+                    {messageFilterInterest !== "all" && ` (${messageFilterInterest})`}
+                  </div>
+                </>
               )}
             </div>
           </TabsContent>

@@ -12,6 +12,6 @@ export async function GetMessages(): Promise<ContactMessageResponse[]> {
 export async function markMessageAsRead(id: number) {
   return api.patch(`/contact/mark-read/${id}`);
 }
-export async function deleteMessage(id: number) {
+export async function deleteMessage(id: number | string) {
   return api.delete(`/contact/delete/${id}`);
 }
