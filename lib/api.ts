@@ -57,7 +57,7 @@ export const api = {
       headers: { "Content-Type": "application/json",
             "Authorization": `Bearer ${token}`
        },
-    });
+    });;
 
     if (!res.ok) {
       const error = await res.text();
