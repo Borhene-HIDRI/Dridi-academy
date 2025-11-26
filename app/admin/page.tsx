@@ -124,7 +124,7 @@ async function loadPendingUsers() {
 });
 connection.on("UserApproved", (data: { id: string }) => {
   console.log("User approved:", data.id);
-  // setPendingUsers(prev => prev.filter(u => u.id !== data.id));
+  setPendingUsers(prev => prev.filter(u => u.id !== data.id));
 });
 
 
@@ -255,6 +255,10 @@ const handleDeleteMessage = (message: ContactMessageResponse) => {
     },
   })
 }
+
+const isLoading = (userId: string, actionType: "approve" | "reject" | "delete") => {
+  return loadingAction?.id === userId && loadingAction?.type === actionType;
+};
 
 
   return (
@@ -438,11 +442,11 @@ const handleDeleteMessage = (message: ContactMessageResponse) => {
                       </div>
                       <div className="flex items-center gap-3 w-full lg:w-auto shrink-0">
                        <Button
-  disabled={loadingAction?.id === user.id && loadingAction.type === "approve"}
+  disabled={isLoading(user.id, "approve")}
   onClick={() => handleApprove(user)}
   className="bg-green-600 hover:bg-green-700 text-white font-heading tracking-wider px-6"
 >
-  {loadingAction?.id === user.id && loadingAction.type === "approve" ? (
+  {isLoading(user.id, "approve") ? (
     <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
   ) : (
     <>
@@ -453,11 +457,11 @@ const handleDeleteMessage = (message: ContactMessageResponse) => {
 </Button>
 
 <Button
-  disabled={loadingAction?.id === user.id && loadingAction.type === "reject"}
+  disabled={isLoading(user.id, "reject")}
   onClick={() => handleReject(user)}
   className="bg-red-600 hover:bg-red-700 text-white font-heading tracking-wider px-6"
 >
-  {loadingAction?.id === user.id && loadingAction.type === "reject" ? (
+  {isLoading(user.id, "reject") ? (
     <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
   ) : (
     <>
