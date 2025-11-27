@@ -71,8 +71,11 @@ document.cookie = `token=${res.token}; Path=/; SameSite=Lax; Max-Age=86400`;
   const decodedRole = decoded["role"] || decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
 
   console.log("Decoded Role:", decodedRole);
-toast.success(`Welcome back 👊🔥 ${UserFullName || ""} 👊🔥`);
-
+// toast(`Welcome back 👊🔥 ${UserFullName || ""} 👊🔥`);
+    toast(`Welcome back 👊🔥 ${UserFullName || ""} 👊🔥`, {
+          description: "Let's get training!",
+         
+        })
     if (decodedRole === "Admin") {
       router.push("/admin");
       return;

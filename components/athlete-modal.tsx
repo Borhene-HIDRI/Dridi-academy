@@ -13,6 +13,8 @@ import { format } from "date-fns"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
+import { deleteMember, updateMember } from "@/lib/services/member-service"
+import { toast } from "sonner"
 
 interface AthleteModalProps {
   athlete: Athlete
@@ -24,28 +26,60 @@ interface AthleteModalProps {
 export function AthleteModal({ athlete, isOpen, onClose, onUpdate }: AthleteModalProps) {
   const [formData, setFormData] = useState<Athlete>(athlete)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+    const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [isEditMode, setIsEditMode] = useState(false)
   const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
     from: athlete.trainingPeriodStart ? new Date(athlete.trainingPeriodStart) : undefined,
     to: athlete.trainingPeriodEnd ? new Date(athlete.trainingPeriodEnd) : undefined,
   })
 
-  const handleSave = () => {
-    const updatedData = {
-      ...formData,
-      trainingPeriodStart: dateRange.from ? format(dateRange.from, "yyyy-MM-dd") : "",
-      trainingPeriodEnd: dateRange.to ? format(dateRange.to, "yyyy-MM-dd") : "",
-    }
-    updateAthlete(updatedData)
+const handleSave = async () => {
+    // if (!selectedMonth || !selectedStatus) {
+    //   toast.info("No payment update detected. Saving other fields…");
+    // }
+
+   const dto = {
+  fullName: formData.fullName,
+  email: formData.email,
+  phoneNumber: formData.phoneNumber,
+  dateOfBirth: formData.dateOfBirth || null,
+  trainingCredits: formData.trainingCredits,
+  totalBookings: formData.totalBookings,
+  totalClassesAttended: formData.totalClassesAttended,
+  isMembershipActive: formData.isMembershipActive,
+
+  trainingPeriodStart: dateRange.from ? format(dateRange.from, "yyyy-MM-dd") : null,
+  trainingPeriodEnd: dateRange.to ? format(dateRange.to, "yyyy-MM-dd") : null,
+
+  // Now sending the WHOLE updated list
+  paymentHistory: formData.paymentHistory.map((p) => ({
+    month: p.month,
+    status: p.status,
+  }))
+};
+
+    console.log("DTO SENT TO BACKEND:", dto);
+
+    await updateMember(athlete.id, dto);
+    toast.success("Member updated successfully.");
     onUpdate()
     setIsEditMode(false)
   }
 
-  const handleDelete = () => {
-    deleteAthlete(athlete.id)
-    onUpdate()
-    onClose()
+ const handleDelete = async () => {
+  try {
+    await deleteMember(athlete.id);           // ⬅️ WAIT for backend to delete
+
+    toast.success(`${athlete.fullName} deleted successfully.`);
+
+    await onUpdate();                         // ⬅️ Refresh list AFTER delete
+    onClose();                                // ⬅️ Close modal LAST
+  } catch (error) {
+    console.error(error);
+    toast.error("Failed to delete member.");
   }
+};
 
   const getMonthsInRange = (startDate: string, endDate: string) => {
     const start = new Date(startDate)
@@ -124,7 +158,7 @@ export function AthleteModal({ athlete, isOpen, onClose, onUpdate }: AthleteModa
                 value="details"
                 className="data-[state=active]:bg-[oklch(0.6_0.2_20)] data-[state=active]:text-white font-heading text-zinc-400"
               >
-                Personal Info
+                Personal Information
               </TabsTrigger>
               <TabsTrigger
                 value="membership"
@@ -366,7 +400,7 @@ export function AthleteModal({ athlete, isOpen, onClose, onUpdate }: AthleteModa
                   >
                     Membership Active
                   </Label>
-                  <p className="text-sm text-zinc-400">Enable or disable membership status</p>
+                  {/* <p className="text-sm text-zinc-400">Enable or disable membership status</p> */}
                 </div>
                 <Switch
                   id="membershipActive"

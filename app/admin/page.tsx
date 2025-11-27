@@ -6,6 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Search, Mail, Phone, Calendar, Check, X, UserPlus, Users, Trash2, MessageSquare, Filter } from "lucide-react"
+import { useRouter } from "next/navigation"
+
 import {
   Pagination,
   PaginationContent,
@@ -32,9 +34,12 @@ import { toast } from "sonner";
 import { ConfirmationDialog } from "@/components/confirmation-dialog"
 import { ContactMessageResponse } from "@/lib/types/contact"
 import { deleteMessage, GetMessages, markMessageAsRead } from "@/lib/services/ContactService"
-import { PendingUser } from "@/lib/types/member"
+import { MemberFull, PendingUser } from "@/lib/types/member"
 import { approveUser, getPendingUsers, rejectUser } from "@/lib/services/UserService"
 import { HubConnection, HubConnectionBuilder } from "@microsoft/signalr";
+import { AuthModal } from "@/components/auth-modal"
+import { getAllMembers } from "@/lib/services/member-service"
+import { mapMemberToAthlete } from "@/lib/mappers"
 
 export default function AdminDashboard() {
 const FILTER_OPTIONS = [
@@ -56,6 +61,9 @@ const [pendingSearch, setPendingSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all")
 
   const [messages,setMessages] = useState<ContactMessageResponse[]>([]);
+
+  const [allMembers, setAllMembers] = useState<MemberFull[]>([])
+
   const [currentPage, setCurrentPage] = useState(1)
 
   const [selectedAthlete, setSelectedAthlete] = useState<Athlete | null>(null)
@@ -88,6 +96,16 @@ async function loadMessages(){
     console.error("Failed to load message",err)
   }
 }
+
+async function LoadAllMembers(){
+  try{
+    const data = await getAllMembers();
+    setAllMembers(data);
+  }catch(err){
+    console.error("Failed to load message",err)
+  }
+}
+
 async function loadPendingUsers() {
   try {
     const users = await getPendingUsers(); // PAS .data !!!
@@ -100,18 +118,40 @@ async function loadPendingUsers() {
 
 
 
-  const refreshData = () => {
-    const allAthletes = getAthletes()
-    console.log("[v0] Total athletes:", allAthletes.length)
-    console.log("[v0] Approved athletes:", allAthletes.filter((a) => a.isApproved).length)
-    console.log("[v0] Pending athletes:", allAthletes.filter((a) => !a.isApproved).length)
+  const refreshData = async () => {
+    // const allAthletes = getAthletes()
+    // console.log("[v0] Total athletes:", allAthletes.length)
+    // console.log("[v0] Approved athletes:", allAthletes.filter((a) => a.isApproved).length)
+    // console.log("[v0] Pending athletes:", allAthletes.filter((a) => !a.isApproved).length)
 
-    setAthletes(allAthletes.filter((a) => a.isApproved))
-    setPendingAthletes(getPendingAthletes())
+    // setAthletes(allAthletes.filter((a) => a.isApproved))
+    // setPendingAthletes(getPendingAthletes())
     // setMessages(getMessages())
+  try {
+    const members = await getAllMembers(); // backend data
+
+    const approved = members.filter(m => m.isApproved === true);
+
+    const converted = approved.map(mapMemberToAthlete);
+
+    setAthletes(converted);
+
+    console.log("Loaded athletes: ", converted);
+  } catch (error) {
+    console.error(error);
   }
+};
+  const router = useRouter();
 
  useEffect(() => {
+
+  const token = localStorage.getItem("token");
+  if(!token){
+    router.push("/");
+    toast.info("Please log in!")
+  }
+
+
   let connection: HubConnection | null = null;
 
   const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "";
@@ -119,8 +159,8 @@ async function loadPendingUsers() {
 
   const init = async () => {
     // Charger données initiales
-    refreshData();
-    loadMessages();
+   await  refreshData();
+  await  loadMessages();
     loadPendingUsers();
 
     // Vérifier l’URL SignalR
@@ -297,8 +337,10 @@ const handleApprove = (user: PendingUser) => {
         setPendingUsers(prev => prev.filter(u => u.id !== user.id));
 
         // 3️⃣ Toast succès
-       toast.success("Event has been created.")
-
+      //  toast.success("$`{user.fullName} has been approved.`");
+    toast.success(` ${user.fullName} has been approved.`, {
+         
+        })
 
       } catch (err) {
         // 4️⃣ Gestion erreur
@@ -308,6 +350,7 @@ const handleApprove = (user: PendingUser) => {
         //   description: "Failed to approve user.",
         //   className: "bg-red-900 border-red-700 text-white"
         // });
+        toast.warning("Failed to approve user.")
       } finally {
         // 5️⃣ Fermer la modale
         setConfirmDialog(prev => ({ ...prev, isOpen: false }));
@@ -378,7 +421,10 @@ const deleteSelectedMessages = async () => {
       try {
         for (const id of selectedMessages) {
           await deleteMessage(id);
+
         }
+                  toast.info(`Messages deleted successfully.`);
+
         setMessages(prev => prev.filter(m => !selectedMessages.includes(m.id)));
         setSelectedMessages([]);
       } catch (error) {
@@ -399,6 +445,8 @@ const handleDeleteMessage = (message: ContactMessageResponse) => {
       try {
         // 1️⃣ Appel API vers ton backend
         await deleteMessage(message.id)
+      toast.success(`Message deleted successfully.`);
+
 
         // 2️⃣ Mise à jour immédiate du state
         setMessages(prev => prev.filter(m => m.id !== message.id))
@@ -436,14 +484,14 @@ const isLoading = (userId: string, actionType: "approve" | "reject" | "delete") 
                 value="athletes"
                 className="data-[state=active]:bg-primary  data-[state=active]:text-white font-heading tracking-wider px-6 py-2.5 transition-all"
               >
-                <Users className="w-4 h-4 mr-2" />
+                <Users className="w-4 h-4 mr-2 text-orange-500" />
                 Members
               </TabsTrigger>
               <TabsTrigger
                 value="approvals"
                 className="data-[state=active]:bg-primary data-[state=active]:text-white font-heading tracking-wider px-6 py-2.5 relative transition-all"
               >
-                <UserPlus className="w-4 h-4 mr-2" />
+                <UserPlus className="w-4 h-4 mr-2 text-orange-500" />
                 Approvals
                 {pendingUsers.length > 0 && (
                   <motion.span
@@ -459,7 +507,7 @@ const isLoading = (userId: string, actionType: "approve" | "reject" | "delete") 
                 value="messages"
                 className="data-[state=active]:bg-primary data-[state=active]:text-white font-heading tracking-wider px-6 py-2.5 relative transition-all"
               >
-                <MessageSquare className="w-4 h-4 mr-2" />
+                <MessageSquare className="w-4 h-4 mr-2 text-orange-500" />
                 Messages
                 {messages.filter((m) => !m.isRead).length > 0 && (
                   <motion.span
@@ -520,11 +568,17 @@ const isLoading = (userId: string, actionType: "approve" | "reject" | "delete") 
                       >
                         <div className="flex items-start gap-4 h-full">
                           <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border-2 border-white/20 group-hover:border-primary transition-colors">
-                            <img
-                              src={athlete.imageUrl || "/placeholder.svg"}
-                              alt={athlete.fullName}
-                              className="h-full w-full object-cover"
-                            />
+                           {athlete.imageUrl ? (
+    <img
+      src={`${process.env.NEXT_PUBLIC_API_URL?.replace("/api", "")}${athlete.imageUrl}`}
+      alt={athlete.fullName}
+      className="h-full w-full object-cover"
+    />
+  ) : (
+    <span className="text-white font-heading text-3xl">
+      {athlete.fullName.charAt(0).toUpperCase()}
+    </span>
+  )}
                           </div>
                           <div className="flex-1 min-w-0">
                             <h3 className="font-heading font-bold text-lg text-white group-hover:text-primary transition-colors mb-2 truncate">
@@ -614,11 +668,11 @@ const isLoading = (userId: string, actionType: "approve" | "reject" | "delete") 
                   </div>
                 </>
               ) : (
-                <div className="text-center py-20 mt-8">
+                <div className="text-center py-20 bg-zinc-900/30 border border-dashed border-white/10">
                   <Users className="h-16 w-16 mx-auto mb-4 text-zinc-700" />
                   <p className="text-zinc-500 text-lg font-heading">No Members found</p>
                   <p className="text-zinc-600 text-sm mt-2">
-                    {searchTerm ? "Try adjusting your search criteria" : "Approve pending athletes to see them here"}
+                    {searchTerm ? "" : ""}
                   </p>
                 </div>
               )}
@@ -674,7 +728,7 @@ const isLoading = (userId: string, actionType: "approve" | "reject" | "delete") 
             <div className="space-y-4">
               {pendingUsers.length === 0 ? (
                 <div className="text-center py-20 bg-zinc-900/30 border border-dashed border-white/10">
-                  <UserPlus className="h-16 w-16 mx-auto mb-4 text-zinc-700" />
+                  <UserPlus className="h-16 w-16 mx-auto mb-4 text-zinc-700 " />
                   <p className="text-zinc-500 text-lg font-heading">No pending approvals</p>
                 </div>
               ) : (
@@ -731,7 +785,7 @@ className="relative bg-gradient-to-br from-zinc-900/90 to-zinc-900/50 border  bo
                         </div>
                       </div>
                       <div className="flex items-center gap-3 w-full lg:w-auto shrink-0">
-<div className="flex items-center gap-3 mt-4 ">
+<div className="flex items-center gap-3 mt-4  ">
   {/* APPROVE */}
   <Button
     disabled={isLoading(user.id, "approve")}

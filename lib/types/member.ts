@@ -2,6 +2,7 @@ export interface MemberPayment {
   month: string;
   status: string;
 }
+
 export interface PendingUser {
   id: string
   fullName: string
@@ -31,6 +32,8 @@ export interface MemberSub {
   isMembershipActive: boolean;
   totalClassesAttended: number;
   totalBookings: number;
+  membershipExpiresOn: string | null;
+  createdAt: Date;
   trainingPeriodStart: string | null;
   trainingPeriodEnd: string | null;
   payments: MemberPayment[];
@@ -41,9 +44,20 @@ export interface MemberFull {
   fullName: string;
   email: string;
   phoneNumber: string;
-  imageUrl?: string | null;
+  imageUrl?: string ;
   isApproved: boolean;
   createdAt: string;
 
   member: MemberSub | null;
+}
+export interface MemberUpdateDTO {  
+  fullName?: string;
+  phoneNumber?: string;
+  dateOfBirth?: string | null;
+  trainingCredits?: number;
+  isMembershipActive?: boolean;
+  trainingPeriodStart?: string | null;
+  trainingPeriodEnd?: string | null;
+    payments: MemberPayment[]
+
 }
