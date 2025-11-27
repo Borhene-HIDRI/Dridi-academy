@@ -9,15 +9,10 @@ import { Calendar, CreditCard, Trophy, Users } from "lucide-react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { StatCard } from "@/components/stat-card"
 import AuthGuard from "@/components/AuthGuard"
-import { jwtDecode } from "jwt-decode"
 
 export default function DashboardPage() {
   const { user, isAuthenticated, loadingUser } = useAuth()
   const router = useRouter()
-
-  const token = localStorage.getItem("token");
-  const decodedRole = jwtDecode
-
 
   useEffect(() => {
     // ⛔ Do not redirect until user information is fully loaded
