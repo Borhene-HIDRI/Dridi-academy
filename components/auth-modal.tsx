@@ -81,7 +81,7 @@ document.cookie = `token=${res.token}; Path=/; SameSite=Lax; Max-Age=86400`;
       return;
     }
 
-    if (decodedRole === "Athelete") {
+    if (decodedRole === "Member") {
       router.push("/dashboard");
       return;
     }
