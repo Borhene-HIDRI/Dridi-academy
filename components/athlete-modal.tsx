@@ -63,7 +63,7 @@ const handleSave = async () => {
 
     await updateMember(athlete.id, dto);
     toast.success("Member updated successfully.");
-    onUpdate()
+     onUpdate()
     setIsEditMode(false)
   }
 
@@ -72,9 +72,10 @@ const handleSave = async () => {
     await deleteMember(athlete.id);           // ⬅️ WAIT for backend to delete
 
     toast.success(`${athlete.fullName} deleted successfully.`);
+       onUpdate();                         // ⬅️ Refresh list AFTER delete
 
-    await onUpdate();                         // ⬅️ Refresh list AFTER delete
-    onClose();                                // ⬅️ Close modal LAST
+    onClose();  
+                              // ⬅️ Close modal LAST
   } catch (error) {
     console.error(error);
     toast.error("Failed to delete member.");
@@ -414,8 +415,8 @@ const handleSave = async () => {
           </Tabs>
         ) : (
           <div className="py-6">
-            <p className="text-center text-lg mb-4 text-white">Are you sure you want to delete this athlete?</p>
-            <p className="text-center text-zinc-400">This action cannot be undone.</p>
+            <p className="text-center text-lg mb-4 text-white">Are you sure you want to delete <h1 className="text-center  uppercase text-orange-500">{athlete.fullName}</h1> Membership?</p>
+            <p className="text-center  uppercase text-red-500 underline">This action cannot be undone.</p>
           </div>
         )}
 

@@ -1,6 +1,6 @@
 import { resolve } from "path";
 import { api } from "../api";
-import { PendingUser } from "../types/member";
+import { MemberFull, PendingUser } from "../types/member";
 import type { RegisterDTO, LoginDTO, AuthResponse } from "../types/user";
 import type { AxiosResponse } from "axios";
 
@@ -51,9 +51,23 @@ export const UserService = {
 
  
 };
-export async function getPendingUsers(): Promise<PendingUser[]> {
- return api.get<PendingUser[]>("/User/pending");
+// export async function getPendingUsers(): Promise<PendingUser[]> {
+//  return api.get<PendingUser[]>("/User/pending");
+// }
+export async function getPendingUsersPaginated(page: number, pageSize: number) {
+  const url = `/User/pending?page=${page}&pageSize=${pageSize}`;
+
+  const res = await api.get(url);
+
+  return res as {
+    data: any[];
+    total: number;
+    page: number;
+    totalPages: number;
+  };
 }
+
+
 export async function approveUser(userId: string): Promise<string> {
   return api.post<string>(`/User/approve/${userId}`);
 }
@@ -61,3 +75,19 @@ export async function approveUser(userId: string): Promise<string> {
 export async function rejectUser(userId: string): Promise<string> {
   return api.delete<string>(`/User/${userId}`);
 }
+
+export async function getPaginatedMembers(page = 1, pageSize = 20)
+  : Promise<{
+      page: number;
+      pageSize: number;
+      total: number;
+      totalPages: number;
+      data: MemberFull[];
+    }> 
+{
+  return api.get(`/Member/paginated?page=${page}&pageSize=${pageSize}`);
+}
+export async function searchMembers(query: string): Promise<{ total: number; data: MemberFull[] }> {
+  return api.get(`/Member/search?query=${encodeURIComponent(query)}`);
+}
+

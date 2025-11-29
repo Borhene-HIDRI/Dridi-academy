@@ -95,6 +95,9 @@ const [authOpen, setAuthOpen] = useState(false)
           <a href="#schedule" className="hover:text-primary transition-colors">SCHEDULE</a>
           <a href="#team" className="hover:text-primary transition-colors">TEAM</a>
           <Link href="/about" className="hover:text-primary transition-colors">ABOUT</Link>
+          <Link href="/shop" className="hover:text-primary transition-colors">
+              SHOP
+            </Link>
           <a href="#contact" className="hover:text-primary transition-colors">CONTACT</a>
         </div>
      <Button 

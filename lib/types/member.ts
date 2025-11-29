@@ -44,7 +44,7 @@ export interface MemberFull {
   fullName: string;
   email: string;
   phoneNumber: string;
-  imageUrl?: string ;
+  imageUrl?: string | null ;
   isApproved: boolean;
   createdAt: string;
 

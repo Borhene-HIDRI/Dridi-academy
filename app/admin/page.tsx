@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
@@ -28,20 +28,30 @@ import {
   getPendingAthletes,
 } from "@/lib/mock-data"
 import { AthleteModal } from "@/components/athlete-modal"
-import { format } from "date-fns"
+import { format, set } from "date-fns"
 import { delay, motion } from "framer-motion"
 import { toast } from "sonner";
 import { ConfirmationDialog } from "@/components/confirmation-dialog"
 import { ContactMessageResponse } from "@/lib/types/contact"
 import { deleteMessage, GetMessages, markMessageAsRead } from "@/lib/services/ContactService"
 import { MemberFull, PendingUser } from "@/lib/types/member"
-import { approveUser, getPendingUsers, rejectUser } from "@/lib/services/UserService"
+import { approveUser, getPaginatedMembers, getPendingUsersPaginated, rejectUser, searchMembers } from "@/lib/services/UserService"
 import { HubConnection, HubConnectionBuilder } from "@microsoft/signalr";
 import { AuthModal } from "@/components/auth-modal"
 import { getAllMembers } from "@/lib/services/member-service"
 import { mapMemberToAthlete } from "@/lib/mappers"
 
 export default function AdminDashboard() {
+
+  useEffect(() => {
+
+  const token = localStorage.getItem("token");
+  if(!token){
+    router.push("/");
+    toast.info("Please log in!")
+  }},[]);
+
+
 const FILTER_OPTIONS = [
   { value: "all", label: "All Members" },
   { value: "active", label: "Active" },
@@ -50,11 +60,17 @@ const FILTER_OPTIONS = [
   const [messageFilterInterest, setMessageFilterInterest] = useState("all")
 const [selectedPendingUsers, setSelectedPendingUsers] = useState<(string | number|any)[]>([]);
 const [pendingSearch, setPendingSearch] = useState("");
+const [loadingMembers, setLoadingMembers] = useState(true);
+const [loadingPending, setLoadingPending] = useState(true);
+const [loadingMessages, setLoadingMessages] = useState(true);
+const [pendingTotalCount, setPendingTotalCount] = useState(0);
 
   const [messageFilterStatus, setMessageFilterStatus] = useState("all")
   const [currentMessagePage, setCurrentMessagePage] = useState(1)
   const [activeTab, setActiveTab] = useState("athletes")
   const [searchTerm, setSearchTerm] = useState("")
+const [searchResults, setSearchResults] = useState<Athlete[] | null>(null);
+const [loadingSearch, setLoadingSearch] = useState(false);
   const [athletes, setAthletes] = useState<Athlete[]>([])
   const [pendingAthletes, setPendingAthletes] = useState<Athlete[]>([])
   // const [messages, setMessages] = useState<Message[]>([])
@@ -63,8 +79,14 @@ const [pendingSearch, setPendingSearch] = useState("");
   const [messages,setMessages] = useState<ContactMessageResponse[]>([]);
 
   const [allMembers, setAllMembers] = useState<MemberFull[]>([])
+const [memberPage, setMemberPage] = useState(1);
+const [memberTotalPages, setMemberTotalPages] = useState(1);
+const [totalApplicationMembers, settotalApplicationMembers] = useState(1);
+
 
   const [currentPage, setCurrentPage] = useState(1)
+const [pendingPage, setPendingPage] = useState(1);
+const [pendingTotalPages, setPendingTotalPages] = useState(1);
 
   const [selectedAthlete, setSelectedAthlete] = useState<Athlete | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -73,8 +95,9 @@ const [loadingAction, setLoadingAction] = useState<{id: string, type: "approve" 
 const [selectedMessages, setSelectedMessages] = useState<(string | number)[]>([]);
 const [messageSearchTerm, setMessageSearchTerm] = useState("");
 
-const ITEMS_PER_PAGE = 6
+// const ITEMS_PER_PAGE = 6
 const MESSAGES_PER_PAGE = 5
+
 const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean
     title: string
@@ -88,68 +111,173 @@ const [confirmDialog, setConfirmDialog] = useState<{
     onConfirm: () => {},
   })
 
-async function loadMessages(){
-  try{
-    const data = await GetMessages()
-    setMessages(data);
-  }catch(err){
-    console.error("Failed to load message",err)
-  }
-}
 
-async function LoadAllMembers(){
-  try{
-    const data = await getAllMembers();
-    setAllMembers(data);
-  }catch(err){
-    console.error("Failed to load message",err)
-  }
-}
 
-async function loadPendingUsers() {
+// async function LoadAllMembers(){
+//   try{
+//     const data = await getAllMembers();
+//     setAllMembers(data);
+//   }catch(err){
+//     console.error("Failed to load message",err)
+//   }
+// }
+  /* ==========================================================
+     🔥 LOAD PAGINATED MEMBERS (MAIN CHANGE)
+     ========================================================== */
+ const MEMBERS_PER_PAGE = 9;
+
+async function loadPaginatedMembers(page = 1) {
   try {
-    const users = await getPendingUsers(); // PAS .data !!!
-    setPendingUsers(users);
+    setLoadingMembers(true);
+
+    const res: {
+      page: number;
+      pageSize: number;
+      total: number;
+      totalPages: number;
+      data: MemberFull[];
+    } = await getPaginatedMembers(page, MEMBERS_PER_PAGE);
+
+    const paginatedMembers = res.data;
+    const totalPages = res.totalPages;
+    const totalMembers = res.total;
+    setAthletes(paginatedMembers.map(mapMemberToAthlete));
+    setMemberTotalPages(totalPages);
+    setMemberPage(page);
+settotalApplicationMembers(totalMembers);
+  } finally {
+    setLoadingMembers(false);
+  }
+}
+const searchDelay = useRef<NodeJS.Timeout | null>(null);
+async function executeSearch(value: string) {
+  searchRequests.current++;
+  setLoadingSearch(true);
+
+  try {
+    const res = await searchMembers(value);
+    const formatted = res.data.map(mapMemberToAthlete);
+    setSearchResults(formatted);
   } catch (err) {
-    console.error("Failed to load pending users", err);
+    console.log("Search error:", err);
+  } finally {
+    searchRequests.current--;
+
+    // Spinner OFF ONLY when all searches are done
+    if (searchRequests.current === 0) {
+      setLoadingSearch(false);
+    }
+  }
+}
+
+const searchRequests = useRef(0); 
+function handleSearchInput(value: string) {
+  setSearchTerm(value);
+
+  // Clear previous debounce timer
+  if (searchDelay.current) {
+    clearTimeout(searchDelay.current);
+  }
+
+  // If empty -> cancel search
+  if (!value.trim()) {
+    setSearchResults(null);
+    setLoadingSearch(false);
+    return;
+  }
+
+  // Debounce actual API call
+  searchDelay.current = setTimeout(() => {
+    executeSearch(value);
+  }, 350);
+}
+
+
+
+
+
+  // async function loadPendingUsers() {
+  //   try {
+  //     setLoadingPending(true)
+  //     const users = await getPendingUsers()
+  //     setPendingUsers(users)
+  //   } catch (err) {
+  //     console.error("Failed pending users", err)
+  //   } finally {
+  //     setLoadingPending(false)
+  //   }
+  // }
+async function loadPendingUsers(page = 1) {
+  try {
+    setLoadingPending(true);
+
+    const res = await getPendingUsersPaginated(page, PENDING_PER_PAGE);
+
+    setPendingUsers(res.data);
+    setPendingTotalPages(res.totalPages);
+    setPendingPage(page);
+    setPendingTotalCount(res.total)
+
+  } catch (err) {
+    console.error("Failed loading pending users:", err);
+  } finally {
+    setLoadingPending(false);
   }
 }
 
 
 
 
-  const refreshData = async () => {
-    // const allAthletes = getAthletes()
-    // console.log("[v0] Total athletes:", allAthletes.length)
-    // console.log("[v0] Approved athletes:", allAthletes.filter((a) => a.isApproved).length)
-    // console.log("[v0] Pending athletes:", allAthletes.filter((a) => !a.isApproved).length)
-
-    // setAthletes(allAthletes.filter((a) => a.isApproved))
-    // setPendingAthletes(getPendingAthletes())
-    // setMessages(getMessages())
-  try {
-    const members = await getAllMembers(); // backend data
-
-    const approved = members.filter(m => m.isApproved === true);
-
-    const converted = approved.map(mapMemberToAthlete);
-
-    setAthletes(converted);
-
-    console.log("Loaded athletes: ", converted);
-  } catch (error) {
-    console.error(error);
+  async function loadMessages() {
+    try {
+      setLoadingMessages(true)
+      const data = await GetMessages()
+      setMessages(data)
+    } catch (err) {
+      console.error("Failed messages", err)
+    } finally {
+      setLoadingMessages(false)
+    }
   }
+
+
+
+//   const refreshData = async () => {
+//     // const allAthletes = getAthletes()
+//     // console.log("[v0] Total athletes:", allAthletes.length)
+//     // console.log("[v0] Approved athletes:", allAthletes.filter((a) => a.isApproved).length)
+//     // console.log("[v0] Pending athletes:", allAthletes.filter((a) => !a.isApproved).length)
+
+//     // setAthletes(allAthletes.filter((a) => a.isApproved))
+//     // setPendingAthletes(getPendingAthletes())
+//     // setMessages(getMessages())
+//   try {
+//     const members = await getAllMembers(); // backend data
+
+//     const approved = members.filter(m => m.isApproved === true);
+
+//     const converted = approved.map(mapMemberToAthlete);
+
+//     setAthletes(converted);
+
+//     console.log("Loaded athletes: ", converted);
+//   } catch (error) {
+//     console.error(error);
+//   }
+// };
+const refreshData = async () => {
+  await loadPaginatedMembers(memberPage);
 };
+
   const router = useRouter();
 
  useEffect(() => {
 
-  const token = localStorage.getItem("token");
-  if(!token){
-    router.push("/");
-    toast.info("Please log in!")
-  }
+  // const token = localStorage.getItem("token");
+  // if(!token){
+  //   router.push("/");
+  //   toast.info("Please log in!")
+  // }
 
 
   let connection: HubConnection | null = null;
@@ -159,7 +287,7 @@ async function loadPendingUsers() {
 
   const init = async () => {
     // Charger données initiales
-   await  refreshData();
+await loadPaginatedMembers(1); 
   await  loadMessages();
     loadPendingUsers();
 
@@ -189,9 +317,11 @@ async function loadPendingUsers() {
   console.log("New pending user received:", user);
   setPendingUsers(prev => [user, ...prev]);
 });
-connection.on("UserApproved", (data: { id: string }) => {
+connection.on("UserApproved", async (data: { id: string }) => {
   console.log("User approved:", data.id);
   setPendingUsers(prev => prev.filter(u => u.id !== data.id));
+
+  await loadPaginatedMembers(memberPage); 
 });
 
 
@@ -232,7 +362,11 @@ const approveSelected = () => {
     onConfirm: async () => {
       for (const id of selectedPendingUsers) {
         await approveUser(id);
+
+                loadPendingUsers(pendingPage);
+
       }
+                toast.success(`Users Approved successfully.`);
 
       setPendingUsers(prev => prev.filter(u => !selectedPendingUsers.includes(u.id)));
       setSelectedPendingUsers([]);
@@ -251,7 +385,9 @@ const rejectSelected = () => {
     onConfirm: async () => {
       for (const id of selectedPendingUsers) {
         await rejectUser(id);
+        loadPendingUsers(pendingPage);
       }
+        toast.success(`Users rejected successfully.`);
 
       setPendingUsers(prev => prev.filter(u => !selectedPendingUsers.includes(u.id)));
       setSelectedPendingUsers([]);
@@ -271,7 +407,7 @@ const filteredPending = pendingUsers.filter((u) => {
 });
 
 // 2️⃣ Pagination for pending users (same logic as athletes)
-const PENDING_PER_PAGE = 5;
+const PENDING_PER_PAGE = 10;
 
 const totalPendingPages = Math.ceil(filteredPending.length / PENDING_PER_PAGE);
 
@@ -279,20 +415,52 @@ const paginatedPending = filteredPending.slice(
   (currentPage - 1) * PENDING_PER_PAGE,
   currentPage * PENDING_PER_PAGE
 );
- const filteredAthletes = athletes
-    .filter((athlete) => athlete.fullName.toLowerCase().includes(searchTerm.toLowerCase()))
-    .filter((athlete) => {
-      if (filterStatus === "active") return athlete.isMembershipActive
-      if (filterStatus === "inactive") return !athlete.isMembershipActive
-      return true
-    })
 
-  const totalPages = Math.ceil(filteredAthletes.length / ITEMS_PER_PAGE)
-  const paginatedAthletes = filteredAthletes.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [searchTerm, filterStatus])
-  
+
+//  const filteredAthletes = athletes
+//     .filter((athlete) => athlete.fullName.toLowerCase().includes(searchTerm.toLowerCase()))
+//     .filter((athlete) => {
+//       if (filterStatus === "active") return athlete.isMembershipActive
+//       if (filterStatus === "inactive") return !athlete.isMembershipActive
+//       return true
+//     })
+
+const displayAthletes = searchResults ?? athletes;
+
+const normalizedSearch = searchTerm.trim().toLowerCase();
+
+const filteredAthletes = displayAthletes
+  .filter((athlete) => {
+    if (!normalizedSearch) return true;
+
+    const fullName = athlete.fullName?.toLowerCase() ?? "";
+    const email = athlete.email?.toLowerCase() ?? "";
+    const phone = athlete.phoneNumber?.toLowerCase() ?? "";
+
+    return (
+      fullName.includes(normalizedSearch) ||
+      email.includes(normalizedSearch) ||
+      phone.includes(normalizedSearch)
+    );
+  })
+  .filter((athlete) => {
+    if (filterStatus === "active") return athlete.isMembershipActive;
+    if (filterStatus === "inactive") return !athlete.isMembershipActive;
+    return true;
+  });
+
+
+
+
+
+  // const totalPages = Math.ceil(filteredAthletes.length / ITEMS_PER_PAGE)
+  // const paginatedAthletes = filteredAthletes.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+  // useEffect(() => {
+  //   setCurrentPage(1)
+  // }, [searchTerm, filterStatus])
+  const paginatedAthletes = filteredAthletes; // DON’T RE-PAGINATE
+const totalPages = memberTotalPages;        // Use backend pagination
+
 const filteredMessages = messages
     .filter((message) =>
       `${message.firstName} ${message.lastName}`.toLowerCase().includes(messageSearchTerm.toLowerCase()),
@@ -334,7 +502,8 @@ const handleApprove = (user: PendingUser) => {
         await approveUser(user.id);
 
         // 2️⃣ Mise à jour UI instantanée
-        setPendingUsers(prev => prev.filter(u => u.id !== user.id));
+setPendingUsers(prev => prev.filter(u => u.id !== user.id));
+await loadPaginatedMembers(memberPage); // 🔥 refresh UI
 
         // 3️⃣ Toast succès
       //  toast.success("$`{user.fullName} has been approved.`");
@@ -373,8 +542,11 @@ const handleApprove = (user: PendingUser) => {
 
         await delay(700);
         await rejectUser(user.id);
+                toast.success(`${user.fullName} rejected successfully.`);
+
 
         setPendingUsers(prev => prev.filter(u => u.id !== user.id));
+await loadPaginatedMembers(memberPage); // 🔥 refresh UI
 
         // toast({
         //   title: "User Rejected",
@@ -493,13 +665,13 @@ const isLoading = (userId: string, actionType: "approve" | "reject" | "delete") 
               >
                 <UserPlus className="w-4 h-4 mr-2 text-orange-500" />
                 Approvals
-                {pendingUsers.length > 0 && (
+                {pendingTotalCount > 0 && (
                   <motion.span
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-zinc-900"
                   >
-                    {pendingUsers.length}
+                    {pendingTotalCount }
                   </motion.span>
                 )}
               </TabsTrigger>
@@ -537,21 +709,33 @@ const isLoading = (userId: string, actionType: "approve" | "reject" | "delete") 
                     ))}
                   </select>
                 </div>
-                <div className="relative flex-1 sm:flex-initial sm:w-80">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-orange-500" />
-                  <Input
-                    placeholder="Looking for a member ?"
-                    className="pl-10 bg-zinc-900/50 border-white/10 text-white focus:border-primary h-11 text-sm"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
+<div className="relative flex-1 sm:flex-initial sm:w-80">
+  <Search className="absolute left-3 top-3 h-4 w-4 text-orange-500" />
+
+  <Input
+    placeholder="Looking for a member ?"
+    className="pl-10 pr-10 bg-zinc-900/50 border-white/10 text-white focus:border-primary h-11 text-sm"
+    value={searchTerm}
+    onChange={(e) => handleSearchInput(e.target.value)}
+  />
+
+  {loadingSearch && (
+    <div className="absolute right-3 top-3">
+      <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+    </div>
+  )}
+</div>
+
               </div>
             )}
           </div>
  <TabsContent value="athletes" className="mt-0">
             <div className="space-y-6">
-              {paginatedAthletes.length > 0 ? (
+{loadingMembers ? (
+  <div className="flex justify-center py-20">
+    <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+  </div>
+) : paginatedAthletes.length > 0 ? (
                 <>
                   <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 auto-rows-max">
                     {paginatedAthletes.map((athlete, idx) => (
@@ -564,10 +748,11 @@ const isLoading = (userId: string, actionType: "approve" | "reject" | "delete") 
                           setSelectedAthlete(athlete)
                           setIsModalOpen(true)
                         }}
-                        className="group relative overflow-hidden bg-gradient-to-br from-zinc-900/90 to-zinc-900/50 border border-white/10 p-6 hover:border-primary/50 transition-all cursor-pointer hover:shadow-2xl hover:shadow-primary/10 rounded-lg"
+                        className="group
+                         relative overflow-hidden bg-gradient-to-br from-zinc-900/90 to-zinc-900/50 border border-white/10 p-6 hover:border-primary/50 transition-all cursor-pointer hover:shadow-2xl hover:shadow-primary/10 rounded-lg"
                       >
                         <div className="flex items-start gap-4 h-full">
-                          <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border-2 border-white/20 group-hover:border-primary transition-colors">
+                          <div className="relative h-24 w-24 rounded-full border-2 border-primary/30 overflow-hidden shrink-0 group-hover:border-primary transition-colors bg-zinc-800 flex items-center justify-center">
                            {athlete.imageUrl ? (
     <img
       src={`${process.env.NEXT_PUBLIC_API_URL?.replace("/api", "")}${athlete.imageUrl}`}
@@ -607,8 +792,45 @@ const isLoading = (userId: string, actionType: "approve" | "reject" | "delete") 
                       </motion.div>
                     ))}
                   </div>
+{memberTotalPages > 1 && (
+  <div className="flex justify-center mt-8 pt-6 border-t border-white/10">
+    <Pagination>
+      <PaginationContent>
 
-                  {totalPages > 1 && (
+        <PaginationItem>
+          <PaginationPrevious
+            onClick={() => memberPage > 1 && loadPaginatedMembers(memberPage - 1)}
+            className={`${memberPage === 1 ? "opacity-50 pointer-events-none" : "cursor-pointer"}`}
+          />
+        </PaginationItem>
+
+        {Array.from({ length: memberTotalPages }, (_, i) => {
+          const pageNum = i + 1;
+          return (
+            <PaginationItem key={pageNum}>
+              <PaginationLink
+                isActive={memberPage === pageNum}
+                onClick={() => loadPaginatedMembers(pageNum)}
+                className="cursor-pointer"
+              >
+                {pageNum}
+              </PaginationLink>
+            </PaginationItem>
+          );
+        })}
+
+        <PaginationItem>
+          <PaginationNext
+            onClick={() => memberPage < memberTotalPages && loadPaginatedMembers(memberPage + 1)}
+            className={`${memberPage === memberTotalPages ? "opacity-50 pointer-events-none" : "cursor-pointer"}`}
+          />
+        </PaginationItem>
+
+      </PaginationContent>
+    </Pagination>
+  </div>
+)}
+                  {/* {totalPages > 1 && (
                     <div className="flex justify-center mt-8 pt-6 border-t border-white/10">
                       <Pagination>
                         <PaginationContent>
@@ -660,10 +882,10 @@ const isLoading = (userId: string, actionType: "approve" | "reject" | "delete") 
                         </PaginationContent>
                       </Pagination>
                     </div>
-                  )}
+                  )} */}
 
                   <div className="text-center text-sm text-zinc-400 mt-4">
-                    Showing {paginatedAthletes.length} of {filteredAthletes.length} members
+                    Showing {paginatedAthletes.length} of {totalApplicationMembers} members
                     {filterStatus !== "all" && ` (${filterStatus})`}
                   </div>
                 </>
@@ -789,7 +1011,7 @@ className="relative bg-gradient-to-br from-zinc-900/90 to-zinc-900/50 border  bo
   {/* APPROVE */}
   <Button
     disabled={isLoading(user.id, "approve")}
-    onClick={() => handleApprove(user)}
+    onClick={() => {handleApprove(user) ; loadPaginatedMembers(memberPage - 1)}}
     className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md flex items-center gap-2 min-w-[110px] justify-center"
   >
     {isLoading(user.id, "approve") ? (
@@ -826,6 +1048,49 @@ className="relative bg-gradient-to-br from-zinc-900/90 to-zinc-900/50 border  bo
                 </div>
               )}
             </div>
+            {/* PAGINATION ICI */}
+{pendingTotalPages > 1 && (
+  <div className="flex justify-center mt-8 pt-6 border-t border-white/10">
+    <Pagination>
+      <PaginationContent>
+
+        <PaginationItem>
+          <PaginationPrevious
+            onClick={() =>
+              pendingPage > 1 && loadPendingUsers(pendingPage - 1)
+            }
+            className={`${pendingPage === 1 ? "opacity-50 pointer-events-none" : "cursor-pointer"}`}
+          />
+        </PaginationItem>
+
+        {Array.from({ length: pendingTotalPages }, (_, i) => {
+          const pageNum = i + 1;
+          return (
+            <PaginationItem key={pageNum}>
+              <PaginationLink
+                isActive={pendingPage === pageNum}
+                onClick={() => loadPendingUsers(pageNum)}
+                className="cursor-pointer"
+              >
+                {pageNum}
+              </PaginationLink>
+            </PaginationItem>
+          );
+        })}
+
+        <PaginationItem>
+          <PaginationNext
+            onClick={() =>
+              pendingPage < pendingTotalPages && loadPendingUsers(pendingPage + 1)
+            }
+            className={`${pendingPage === pendingTotalPages ? "opacity-50 pointer-events-none" : "cursor-pointer"}`}
+          />
+        </PaginationItem>
+
+      </PaginationContent>
+    </Pagination>
+  </div>
+)}
           </TabsContent>
 
 

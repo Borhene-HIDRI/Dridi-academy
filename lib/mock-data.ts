@@ -2,7 +2,7 @@ export interface Athlete {
   id: string
   fullName: string
   email: string
-  imageUrl: string
+  imageUrl?: string | null
   phoneNumber: string
   dateOfBirth: string
   emergencyContact: string
