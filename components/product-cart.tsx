@@ -86,7 +86,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
             </div>
             <Button
               onClick={handleAddToCart}
-              className="w-full bg-primary hover:bg-primary/90 text-white font-heading tracking-wider rounded-none flex items-center justify-center gap-2"
+              className="w-full bg-primary cursor-pointer hover:bg-primary/90 text-white font-heading tracking-wider rounded-none flex items-center justify-center gap-2"
             >
               <ShoppingCart className="h-4 w-4" />
               ADD TO CART

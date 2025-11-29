@@ -112,14 +112,14 @@ function ShopNavbar() {
         <Link href="/" className="flex items-center gap-2">
           <div className="relative w-10 h-10 overflow-hidden rounded-full bg-white p-0.5">
             <Image
-              src="/images/480521460-1073667818106133-4544762354426792498-n.jpg"
+              src="/images/school.jpg"
               alt="Logo"
               fill
               className="object-cover"
             />
           </div>
           <span className="font-heading text-xl font-bold tracking-tighter hidden sm:block">
-            DRIDI <span className="text-primary">MMA</span>
+            ABDERAHMEN DRIDI <span className="text-primary">MMA</span>
           </span>
         </Link>
         <div className="hidden md:flex items-center gap-8 font-heading text-sm tracking-widest">
