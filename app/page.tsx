@@ -81,7 +81,7 @@ const [authOpen, setAuthOpen] = useState(false)
           <a href="#">
           <div className="relative w-10 h-10 overflow-hidden rounded-full bg-white p-0.5">
              <Image 
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/480521460_1073667818106133_4544762354426792498_n-jztncOdPvOePaMZDZ1PBuQJJ5p7YnT.jpg" 
+              src="/images/lou.jpg" 
               alt="Logo" 
               fill
               className="object-cover"
@@ -94,11 +94,13 @@ const [authOpen, setAuthOpen] = useState(false)
         <div className="hidden md:flex items-center gap-8 font-heading text-sm tracking-widest">
           <a href="#schedule" className="hover:text-primary transition-colors">SCHEDULE</a>
           <a href="#team" className="hover:text-primary transition-colors">TEAM</a>
-          <Link href="/about" className="hover:text-primary transition-colors">ABOUT</Link>
           <Link href="/shop" className="hover:text-primary transition-colors">
               SHOP
             </Link>
+          
           <a href="#contact" className="hover:text-primary transition-colors">CONTACT</a>
+          <Link href="/about" className="hover:text-primary transition-colors">ABOUT</Link>
+
         </div>
      <Button 
   onClick={onJoinNow}

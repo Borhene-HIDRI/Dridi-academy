@@ -40,6 +40,7 @@ import { HubConnection, HubConnectionBuilder } from "@microsoft/signalr";
 import { AuthModal } from "@/components/auth-modal"
 import { getAllMembers } from "@/lib/services/member-service"
 import { mapMemberToAthlete } from "@/lib/mappers"
+import AuthGuard from "@/components/AuthGuard"
 
 export default function AdminDashboard() {
 
@@ -648,6 +649,8 @@ const isLoading = (userId: string, actionType: "approve" | "reject" | "delete") 
 
   return (
     <>
+        <AuthGuard role="Admin">
+    
       <DashboardLayout title="Admin Dashboard" description="">
         <Tabs defaultValue="athletes" className="w-full" onValueChange={setActiveTab}>
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
@@ -1313,6 +1316,9 @@ className="relative bg-gradient-to-br from-zinc-900/90 to-zinc-900/50 border  bo
         variant={confirmDialog.variant}
         confirmText={confirmDialog.variant === "danger" ? "Delete" : "Confirm"}
       />
+          </AuthGuard>
+      
     </>
+    
   )
 }

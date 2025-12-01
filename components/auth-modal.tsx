@@ -52,7 +52,7 @@ const handleLogin = async (e: React.FormEvent) => {
 
     if (res.isSuccess) {
       localStorage.setItem("token", res.token || "");
-document.cookie = `token=${res.token}; Path=/; SameSite=Lax; Max-Age=86400`;
+// document.cookie = `token=${res.token}; Path=/; SameSite=Lax; Max-Age=86400`;
        const decoded: any = jwtDecode(res.token);
       const UserFullName = decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"];
       await loadUser();
@@ -72,17 +72,22 @@ document.cookie = `token=${res.token}; Path=/; SameSite=Lax; Max-Age=86400`;
 
   console.log("Decoded Role:", decodedRole);
 // toast(`Welcome back 👊🔥 ${UserFullName || ""} 👊🔥`);
-    toast(`Welcome back 👊🔥 ${UserFullName || ""} 👊🔥`, {
-          description: "Let's get training!",
-         
-        })
+ 
     if (decodedRole === "Admin") {
       router.push("/admin");
+         toast(`Welcome back ${UserFullName || ""} 👊🔥`, {
+         
+        })
       return;
     }
 
     if (decodedRole === "Member") {
       router.push("/dashboard");
+         toast(`Welcome back 👊🔥 ${UserFullName || ""} 👊🔥`, {
+          description: "Let's get training!",
+          duration: 4000,
+          
+        })
       return;
     }
       onClose();

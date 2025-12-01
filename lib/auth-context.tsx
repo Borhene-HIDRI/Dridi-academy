@@ -11,6 +11,7 @@ interface User {
   userType: number;
   role: string; // computed from userType
     isApproved: boolean;
+  createdAt: string;
 
 }
 
@@ -57,12 +58,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const roleMap: any = {
         1: "Admin",
         2: "Coach",
-        3: "Athlete",
+        3: "Member",
       }
 
       const formattedUser: User = {
         ...data,
-        role: roleMap[data.userType] ?? "Athlete",
+        role: roleMap[data.userType] ?? "Member",
       }
 
       setUser(formattedUser)

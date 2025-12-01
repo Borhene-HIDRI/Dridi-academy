@@ -47,7 +47,7 @@ export function UserProfileDropdown() {
           transition={{ duration: 0.25 }}
           className=" font-heading text-gray-400  hidden md:inline-block"
         >
-          Welcome, <span className="text-white">{user.fullName.toUpperCase()}</span>
+             <span>Welcome,</span><span className="text-white font-semibold">{user.fullName.toUpperCase()}</span>
         </motion.span>
       </AnimatePresence>
 

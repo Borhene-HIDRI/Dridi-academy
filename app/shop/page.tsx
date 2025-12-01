@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { Heart, ShoppingCart, ArrowRight } from "lucide-react"
+import { Heart, ShoppingCart, ArrowRight, Instagram } from "lucide-react"
 import { motion } from "framer-motion"
 import { useStore } from "@/lib/store"
 import { ProductCard } from "@/components/product-cart"
@@ -162,7 +162,7 @@ function FeaturedProducts() {
   const featured = PRODUCTS.filter((p) => p.featured)
 
   return (
-    <section className="py-20 bg-background">
+    <section id="bestseller" className="py-20 bg-background">
       <div className="container mx-auto px-4">
         <div className="mb-16">
           <h2 className="text-primary font-heading text-lg tracking-widest mb-2">FEATURED COLLECTION</h2>
@@ -274,14 +274,14 @@ function PromoSection() {
 
 function ShopFooter() {
   return (
-    <footer className="bg-black py-16 border-t border-white/10">
+    <footer className="bg-black py-5 border-t border-white/10">
       <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8  mb-12">
           <div>
-            <Link href="/" className="flex items-center gap-2 mb-4">
-              <div className="relative w-8 h-8 overflow-hidden rounded-full bg-white p-0.5">
+            <Link href="/" className="flex items-center gap-2 mb-4 mt-15 ml-23">
+              <div className="relative w-8 h-8  overflow-hidden rounded-full bg-white p-0.5">
                 <Image
-                  src="/images/480521460-1073667818106133-4544762354426792498-n.jpg"
+                  src="/images/lou.jpg"
                   alt="Logo"
                   fill
                   className="object-cover"
@@ -291,14 +291,14 @@ function ShopFooter() {
                 DRIDI <span className="text-primary">MMA</span>
               </span>
             </Link>
-            <p className="text-gray-500 text-sm">Premium combat sports gear for champions.</p>
+            {/* <p className="text-gray-500 text-sm">Premium combat sports gear for champions.</p> */}
           </div>
 
           <div>
             <h4 className="font-heading font-bold text-white mb-4 tracking-wider">SHOP</h4>
             <ul className="space-y-2 text-gray-400 text-sm">
               <li>
-                <a href="#" className="hover:text-primary transition-colors">
+                <a href="#shop" className="hover:text-primary transition-colors">
                   All Products
                 </a>
               </li>
@@ -313,7 +313,7 @@ function ShopFooter() {
                 </a>
               </li>
               <li>
-                <a href="#" className="hover:text-primary transition-colors">
+                <a href="#bestseller" className="hover:text-primary transition-colors">
                   Best Sellers
                 </a>
               </li>
@@ -350,7 +350,7 @@ function ShopFooter() {
             <h4 className="font-heading font-bold text-white mb-4 tracking-wider">FOLLOW</h4>
             <ul className="space-y-2 text-gray-400 text-sm">
               <li>
-                <a href="#" className="hover:text-primary transition-colors">
+                <a href="https://www.instagram.com/teamdridimma" className="hover:text-primary transition-colors">
                   Instagram
                 </a>
               </li>
@@ -372,7 +372,7 @@ function ShopFooter() {
             </ul>
           </div>
         </div>
-
+{/* 
         <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-gray-500 text-sm">© {new Date().getFullYear()} Dridi MMA. All rights reserved.</p>
           <div className="flex gap-4 text-gray-500 text-sm">
@@ -386,7 +386,7 @@ function ShopFooter() {
               Cookie Settings
             </a>
           </div>
-        </div>
+        </div> */}
       </div>
     </footer>
   )

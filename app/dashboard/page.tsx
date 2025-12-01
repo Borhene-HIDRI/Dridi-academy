@@ -1,109 +1,158 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, CreditCard, Trophy, Users } from "lucide-react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { StatCard } from "@/components/stat-card"
 import AuthGuard from "@/components/AuthGuard"
+import { getMemberByUserId } from "@/lib/services/member-service"
+import type { MemberFull } from "@/lib/types/member"
+import PaymentTimeline from "@/components/payment-timeline"
+import SkeletonDashboard from "@/components/skeleton-dashboard"
 
 export default function DashboardPage() {
   const { user, isAuthenticated, loadingUser } = useAuth()
   const router = useRouter()
 
+  const [userData, setUserData] = useState<MemberFull | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  // ------------------------------
+  // LOAD USER + MEMBER DATA
+  // ------------------------------
   useEffect(() => {
-    // ⛔ Do not redirect until user information is fully loaded
-    if (loadingUser) return;
+    if (loadingUser) return
 
-    // Not logged in → home
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !user) {
       router.push("/")
-      return;
+      return
     }
 
-    // Still no user object yet → stop here
-    if (!user) return;
-
-    // Redirect admin
-    if (user.role === "Admin") {
-      router.push("/admin")
-      return;
-    }
-
-    // Block everyone except athletes
-    if (user.role !== "Athlete") {
+    if (user.role !== "Member") {
       router.push("/")
-      return;
+      return
     }
 
-  }, [loadingUser, isAuthenticated, user, router])
+    async function load() {
+      try {
+        const res = await getMemberByUserId(user!.id)
+        setUserData(res)
+      } catch (err) {
+        console.error("Failed to load membership:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
 
-  // ⏳ Show loader while auth is loading
-  if (loadingUser) {
-    return (
-      <div className="w-full h-screen flex items-center justify-center text-white">
-        Loading...
-      </div>
-    )
-  }
+    load()
+  }, [user, loadingUser, isAuthenticated, router])
 
-  // ⛔ Prevent rendering until we are sure the user is athlete
-  if (!user || user.role !== "Athlete") return null
 
-  // Mock user data for now
-  const membershipData = {
-    trainingCredits: 12,
-    isMembershipActive: true,
-    membershipExpiresOn: "2025-12-31",
-    totalClassesAttended: 45,
-    totalBookings: 50,
-  }
+  // ------------------------------
+  // Extract member BEFORE any returns
+  // ------------------------------
+  const member = userData?.member
 
+  // ------------------------------
+  // NEXT BILLING MONTH (MUST BE BEFORE ANY CONDITIONAL RETURN)
+  // ------------------------------
+  const nextBillingMonth = useMemo(() => {
+    if (!member?.payments) return null
+
+    const unpaid = member.payments.filter(p => p.status === "unpaid")
+    if (unpaid.length === 0) return null
+
+    const sorted = unpaid.sort((a, b) => a.month.localeCompare(b.month))
+    return sorted[0].month
+  }, [member?.payments])
+
+  // ------------------------------
+  // CONDITIONAL RETURNS BELOW HOOKS
+  // ------------------------------
+  if (loadingUser || loading) return <SkeletonDashboard />
+  if (!userData) return null
+
+
+  // ------------------------------
+  // RENDER DASHBOARD
+  // ------------------------------
   return (
-    <AuthGuard role="Athlete">
+    <AuthGuard role="Member">
       <DashboardLayout
-        title={`Welcome back, ${user.fullName}!`}
+        title={`Welcome back, ${user?.fullName}!`}
         description="Track your training progress and membership"
       >
+        {/* TOP STATS */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
           <StatCard
             title="Training Credits"
-            value={membershipData.trainingCredits}
+            value={member?.trainingCredits ?? 0}
             description="Available sessions"
             icon={CreditCard}
           />
+
           <StatCard
             title="Classes Attended"
-            value={membershipData.totalClassesAttended}
+            value={member?.totalClassesAttended ?? 0}
             description="Total sessions"
             icon={Trophy}
           />
+
           <StatCard
             title="Total Bookings"
-            value={membershipData.totalBookings}
+            value={member?.totalBookings ?? 0}
             description="All time"
             icon={Calendar}
           />
+
           <Card className="bg-zinc-900 border-zinc-800">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Membership Status</CardTitle>
               <Users className="h-4 w-4 text-red-600" />
             </CardHeader>
+
             <CardContent>
-              <Badge className={membershipData.isMembershipActive ? "bg-green-600" : "bg-red-600"}>
-                {membershipData.isMembershipActive ? "Active" : "Inactive"}
+              <Badge className={member?.isMembershipActive ? "bg-green-600" : "bg-red-600"}>
+                {member?.isMembershipActive ? "Active" : "Inactive"}
               </Badge>
-              <p className="text-xs text-zinc-400 mt-2">
-                Expires: {new Date(membershipData.membershipExpiresOn).toLocaleDateString()}
-              </p>
+
+              <div className="text-xs text-zinc-400 mt-3 space-y-1">
+                <p>
+                  Start:{" "}
+                  {member?.trainingPeriodStart
+                    ? new Date(member.trainingPeriodStart).toLocaleDateString()
+                    : "—"}
+                </p>
+
+                <p>
+                  End:{" "}
+                  {member?.trainingPeriodEnd
+                    ? new Date(member.trainingPeriodEnd).toLocaleDateString()
+                    : "—"}
+                </p>
+
+                {nextBillingMonth && (
+                  <p className="mt-1 text-yellow-400">
+                    Next billing: {" "}
+                  {member?.trainingPeriodEnd
+                    ? new Date(member.trainingPeriodEnd).toLocaleDateString()
+                    : "—"}
+                  </p>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        <Card className="bg-zinc-900 border-zinc-800">
+        {member?.payments && <PaymentTimeline payments={member.payments} />}
+
+        {/* MEMBERSHIP DETAILS */}
+        <Card className="bg-zinc-900 border-zinc-800 mt-6">
           <CardHeader>
             <CardTitle>Membership Details</CardTitle>
             <CardDescription>Your current membership information</CardDescription>
@@ -111,19 +160,30 @@ export default function DashboardPage() {
           <CardContent className="space-y-4">
             <div className="flex justify-between items-center border-b border-zinc-800 pb-2">
               <span className="text-zinc-400">Email</span>
-              <span>{user.email}</span>
+              <span>{user?.email}</span>
             </div>
+
             <div className="flex justify-between items-center border-b border-zinc-800 pb-2">
               <span className="text-zinc-400">Membership Type</span>
               <span>Premium</span>
             </div>
+
             <div className="flex justify-between items-center border-b border-zinc-800 pb-2">
               <span className="text-zinc-400">Join Date</span>
-              <span>January 15, 2024</span>
+              <span>{" "}
+                  {member?.trainingPeriodStart
+                    ? new Date(member.trainingPeriodStart).toLocaleDateString()
+                    : "—"}</span>
             </div>
+
             <div className="flex justify-between items-center">
-              <span className="text-zinc-400">Next Billing Date</span>
-              <span>{new Date(membershipData.membershipExpiresOn).toLocaleDateString()}</span>
+              <span className="text-zinc-400">Next billing</span>
+              <span className="text-yellow-400 ">
+                {" "}
+                  {member?.trainingPeriodEnd
+                    ? new Date(member.trainingPeriodEnd).toLocaleDateString()
+                    : "—"}
+              </span>
             </div>
           </CardContent>
         </Card>
