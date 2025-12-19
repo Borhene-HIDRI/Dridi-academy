@@ -41,8 +41,7 @@ export const UserService = {
  async login(dto: LoginDTO): Promise<AuthResponse> {
   try {
     const res = await api.post<AuthResponse>("/User/login", dto);
-    console.log("LOGIN RAW RES:", res);
-    return res; // <-- NOT res.data
+    return res; // <
   } catch (error: any) {
     const msg = error?.message || "Login failed";
     throw new Error(msg);

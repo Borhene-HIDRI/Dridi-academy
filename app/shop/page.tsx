@@ -355,7 +355,7 @@ function ShopFooter() {
                 </a>
               </li>
               <li>
-                <a href="#" className="hover:text-primary transition-colors">
+                <a href="https://www.facebook.com/teamdridimma" className="hover:text-primary transition-colors">
                   Facebook
                 </a>
               </li>
